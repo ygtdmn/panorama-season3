@@ -1,0 +1,17 @@
+{
+    "name": "panorama-season-3-auction-contracts",
+    "version": "1.0.0",
+    "private": true,
+    "description": "PanoramaSeason3Auction: multi-unit English auction with uniform clearing price and bid signals for Panorama Season 3 (Foundry project)",
+    "license": "MIT",
+    "dependencies": {
+        "solady": "0.1.26",
+        "forge-std": "github:foundry-rs/forge-std#v1.14.0"
+    },
+    "scripts": {
+        "build": "forge build",
+        "test": "forge test",
+        "test:ci": "FOUNDRY_PROFILE=ci forge test --match-path 'test/PanoramaSeason3*' -vv",
+        "fmt": "forge fmt --check"
+    }
+}
