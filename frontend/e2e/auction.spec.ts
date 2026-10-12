@@ -346,11 +346,18 @@ test.describe("settlement and recovery", () => {
 		await connectWallet(page);
 		await expect(page.getByText("Settlement", { exact: true })).toBeVisible();
 
-		await page.getByLabel("Finalize batch size").fill("3");
-		await page.getByRole("button", { name: /finalize 3/ }).click();
+		// The default batch is 30, so match the label exactly: /finalize 3/ also matches
+		// "finalize 30", which would settle all five at once if the click beat the re-render.
+		const batch = page.getByLabel("Finalize batch size");
+		await batch.fill("3");
+		await expect(batch).toHaveValue("3");
+		const finalize3 = page.getByRole("button", { name: /^finalize 3$/ });
+		await expect(finalize3).toBeEnabled();
+		await finalize3.click();
 		await expect(page.getByText(/settling 3\/5/)).toBeVisible({ timeout: 30_000 });
 
-		await page.getByRole("button", { name: /finalize 3/ }).click();
+		await expect(finalize3).toBeEnabled({ timeout: 30_000 });
+		await finalize3.click();
 		await expect(page.getByText(/settled \//)).toBeVisible({ timeout: 30_000 });
 
 		// Highest bid gets the earliest token (#181, Day 1 of Interface).
@@ -379,11 +386,16 @@ test.describe("settlement and recovery", () => {
 		await page.getByRole("button", { name: "cancel auction" }).click();
 		await expect(page.getByText(/5 bids remaining/)).toBeVisible({ timeout: 30_000 });
 
-		await page.getByLabel("Finalize batch size").fill("3");
-		await page.getByRole("button", { name: /refund all 3/ }).click();
+		const refundBatch = page.getByLabel("Finalize batch size");
+		await refundBatch.fill("3");
+		await expect(refundBatch).toHaveValue("3");
+		const refund3 = page.getByRole("button", { name: /^refund all 3$/ });
+		await expect(refund3).toBeEnabled();
+		await refund3.click();
 		await expect(page.getByText(/2 bids remaining/)).toBeVisible({ timeout: 30_000 });
 
-		await page.getByRole("button", { name: /refund all 3/ }).click();
+		await expect(refund3).toBeEnabled({ timeout: 30_000 });
+		await refund3.click();
 		await expect(page.getByText(/refunds complete/)).toBeVisible({ timeout: 30_000 });
 	});
 
