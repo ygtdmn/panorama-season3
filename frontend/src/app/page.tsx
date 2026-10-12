@@ -21,6 +21,7 @@ import { Standings } from "@/app/auction/components/Standings";
 import { landingRank, RouteBoard } from "@/app/auction/components/RouteBoard";
 import { SeasonDetails, SectionHead } from "@/app/auction/components/SeasonDetails";
 import { WorkChapters } from "@/app/auction/components/WorkChapters";
+import { DailyThemes } from "@/app/auction/components/DailyThemes";
 import {
   pendingActionLabel,
   TransactionStatus,
@@ -1261,6 +1262,8 @@ export default function AuctionPage() {
 
         <main className="min-w-0 flex flex-col gap-20 md:gap-24">
           <WorkChapters />
+
+          <DailyThemes />
 
           <section id="route" className="scroll-mt-4">
             <SectionHead title="the route" zone="interface" />

@@ -2,7 +2,7 @@
 // board. Pure, so the bid console, the route, the admin view and its exports (and the demo) share
 // one tested source.
 
-import { seasonDayForToken, zoneForToken } from "./season3Zones";
+import { seasonDayForToken, themeForToken, zoneForToken } from "./season3Zones";
 import { effectiveSignal, type EffectiveSignal, type SignalRow } from "./signal";
 
 interface BoardBid {
@@ -60,6 +60,8 @@ export interface SignalEntry {
 	token: number;
 	day: number;
 	zone: string;
+	/** Pale Kirill's theme for the day ("creator" for #181). */
+	theme: string;
 	/** The minted holder, or the bidder holding the day's rank while bidding. */
 	holder: `0x${string}` | null;
 	holderKind: "holder" | "bidder" | null;
@@ -88,6 +90,7 @@ export function buildSignalEntries(input: DayInputs): SignalEntry[] {
 			token,
 			day: seasonDayForToken(token) ?? i + 1,
 			zone: zoneForToken(token)?.name ?? "",
+			theme: themeForToken(token)?.theme ?? "",
 			holder,
 			holderKind: holding?.kind === "won" ? "holder" : holding ? "bidder" : null,
 			bidId: holding?.bid.id ?? null,
@@ -106,7 +109,7 @@ export function signalEntriesText(entries: readonly SignalEntry[]): string {
 				? `${e.holderKind}${e.provisional ? " (provisional)" : ""} ${e.holder}`
 				: "no holder";
 			const src = e.source ? ` / from the ${e.source}` : "";
-			return `#${e.token} / Day ${e.day}, ${e.zone} / ${who}${src}\n${e.signal ?? "(no signal)"}`;
+			return `#${e.token} / Day ${e.day}, ${e.theme}, ${e.zone} / ${who}${src}\n${e.signal ?? "(no signal)"}`;
 		})
 		.join("\n\n");
 }
@@ -118,6 +121,7 @@ export function signalEntriesJson(entries: readonly SignalEntry[]): string {
 			token: e.token,
 			day: e.day,
 			zone: e.zone,
+			theme: e.theme,
 			holder: e.holder,
 			holderKind: e.holderKind,
 			bidId: e.bidId,

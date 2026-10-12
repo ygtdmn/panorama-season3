@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	dayLabelForToken,
+	themeForToken,
 	SEASON_3_ZONES,
 	seasonDayForToken,
 	tokenForSeasonDay,
@@ -50,9 +51,28 @@ describe("Season 3 zones", () => {
 	});
 
 	it("labels days the way the board shows them", () => {
-		expect(dayLabelForToken(181)).toBe("Day 1, Interface");
-		expect(dayLabelForToken(193)).toBe("Day 13, Suburb");
-		expect(dayLabelForToken(210)).toBe("Day 30, Abstract");
+		expect(dayLabelForToken(181)).toBe("Day 1, creator");
+		expect(dayLabelForToken(193)).toBe("Day 13, strategy");
+		expect(dayLabelForToken(210)).toBe("Day 30, love");
 		expect(dayLabelForToken(180)).toBeUndefined();
+	});
+});
+
+describe("Pale Kirill's daily themes", () => {
+	it("gives every day its theme and kind, five kinds per zone in order", () => {
+		expect(themeForToken(181)).toEqual({ theme: "creator", kind: "figure" });
+		expect(themeForToken(183)).toEqual({ theme: "internal error", kind: "event" });
+		expect(themeForToken(189)).toEqual({ theme: "hoop", kind: "object" });
+		expect(themeForToken(200)).toEqual({ theme: "silence", kind: "feeling" });
+		expect(themeForToken(207)).toEqual({ theme: "basketball court", kind: "place" });
+		expect(themeForToken(210)).toEqual({ theme: "love", kind: "feeling" });
+		expect(themeForToken(180)).toBeUndefined();
+		expect(themeForToken(211)).toBeUndefined();
+	});
+
+	it("has thirty distinct themes", () => {
+		const all = SEASON_3_ZONES.flatMap((z) => z.themes);
+		expect(all).toHaveLength(30);
+		expect(new Set(all).size).toBe(30);
 	});
 });

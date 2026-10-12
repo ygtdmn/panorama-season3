@@ -93,6 +93,7 @@ describe("buildSignalEntries", () => {
 			token: 181,
 			day: 1,
 			zone: "Interface",
+			theme: "creator",
 			holder: C,
 			holderKind: "holder",
 			bidId: 5,
@@ -120,13 +121,14 @@ describe("buildSignalEntries", () => {
 		).slice(0, 1);
 		expect(entries[0].provisional).toBe(true);
 		expect(signalEntriesText(entries)).toBe(
-			`#181 / Day 1, Interface / bidder (provisional) ${A} / from the bid\nline one\nline two`,
+			`#181 / Day 1, creator, Interface / bidder (provisional) ${A} / from the bid\nline one\nline two`,
 		);
 		expect(JSON.parse(signalEntriesJson(entries))).toEqual([
 			{
 				token: 181,
 				day: 1,
 				zone: "Interface",
+				theme: "creator",
 				holder: A,
 				holderKind: "bidder",
 				bidId: 1,

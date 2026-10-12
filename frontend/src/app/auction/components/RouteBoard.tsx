@@ -1,7 +1,7 @@
 "use client";
 
 import { LuMail } from "react-icons/lu";
-import { DAYS_PER_ZONE, SEASON_3_ZONES, type Season3Zone } from "@/lib/season3Zones";
+import { DAYS_PER_ZONE, SEASON_3_ZONES, themeForToken, type Season3Zone } from "@/lib/season3Zones";
 import type { AuctionBidRow, AuctionPhase, WonRow } from "../hooks/useAuctionState";
 import { eth, short } from "./ui";
 import { STRIP } from "./HeroPanorama";
@@ -85,6 +85,7 @@ function DayCell({
 	const signal =
 		slot.kind === "won" ? signalFor(slot.row.id, slot.row.tokenId) : row ? signalFor(row.id) : undefined;
 	const zoneColor = `var(--z-${zone.id})`;
+	const theme = themeForToken(token);
 
 	return (
 		<li
@@ -94,11 +95,16 @@ function DayCell({
 			}`}
 			style={mine ? { background: `color-mix(in srgb, ${zoneColor} 26%, rgba(4,4,16,0.8))` } : undefined}
 		>
-			<div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5 sm:gap-2 w-12 sm:w-auto shrink-0">
-				<span className="font-sans font-semibold text-[13px] leading-none text-foreground">
-					{day}
+			<div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-0.5 sm:gap-2 w-24 sm:w-auto shrink-0 min-w-0">
+				<span className="flex items-baseline gap-1.5 min-w-0">
+					<span className="font-sans font-semibold text-[13px] leading-none text-foreground">{day}</span>
+					{theme && (
+						<span className="font-sans text-[12px] leading-none text-muted truncate" title={`${theme.kind}: ${theme.theme}`}>
+							{theme.theme}
+						</span>
+					)}
 				</span>
-				<span className="font-mono text-[10px] tabular-nums text-faint">#{token}</span>
+				<span className="font-mono text-[10px] tabular-nums text-faint shrink-0">#{token}</span>
 			</div>
 
 			{row ? (

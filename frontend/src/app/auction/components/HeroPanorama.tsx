@@ -13,6 +13,7 @@ const START_FRAME = 7.75;
 
 const LINKS: { label: string; href: string }[] = [
 	{ label: "The work", href: "#work" },
+	{ label: "The themes", href: "#themes" },
 	{ label: "The route", href: "#route" },
 	{ label: "Signals", href: "#signals" },
 	{ label: "Questions", href: "#questions" },

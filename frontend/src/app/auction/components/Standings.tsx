@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useAddressLabel } from "@/app/hooks/useAddressLabel";
 import { getBlockExplorerAddressUrl } from "@/lib/constants";
 import { LuMail } from "react-icons/lu";
-import { zoneForToken } from "@/lib/season3Zones";
+import { DAYS_PER_ZONE, themeForToken, zoneForToken } from "@/lib/season3Zones";
 import type {
 	AuctionBidRow,
 	AuctionPhase,
@@ -14,14 +14,40 @@ import type {
 import { eth, Label, short } from "./ui";
 import { StandingsInfoModal } from "./StandingsInfoModal";
 
-/** The day a rank holds and its zone: rank 1 is day #1 (token #181), in Interface. */
+/** The day a rank holds and its theme: rank 1 is day #1 (token #181), "creator". */
 function SlotCell({ rank, firstTokenId }: { rank: number | null; firstTokenId: number }) {
-	const zone = rank === null ? undefined : zoneForToken(firstTokenId + rank - 1);
+	const day = rank === null ? undefined : themeForToken(firstTokenId + rank - 1);
 	return (
-		<span className="relative flex items-baseline gap-2 w-[6.5rem] 4xl:w-32 shrink-0 font-mono text-micro 4xl:text-xs tabular-nums text-faint">
+		<span className="relative flex items-baseline gap-2 w-[8.5rem] 4xl:w-40 shrink-0 font-mono text-micro 4xl:text-xs tabular-nums text-faint">
 			<span className="w-6 4xl:w-8 shrink-0">{rank === null ? "none" : `#${rank}`}</span>
-			{zone && <span className="truncate">{zone.name}</span>}
+			{day && (
+				<span className="truncate font-sans text-xs 4xl:text-sm normal-case text-muted" title={`${day.kind}: ${day.theme}`}>
+					{day.theme}
+				</span>
+			)}
 		</span>
+	);
+}
+
+/** The zone's colour down the left edge of every row it holds, so the list reads in groups. */
+function ZoneBar({ rank, firstTokenId }: { rank: number | null; firstTokenId: number }) {
+	const zone = rank === null ? undefined : zoneForToken(firstTokenId + rank - 1);
+	if (!zone) return null;
+	return <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: `var(--z-${zone.id})` }} />;
+}
+
+/** Heads each group of five with its zone, in the zone's colour. */
+function ZoneHeader({ rank, firstTokenId }: { rank: number; firstTokenId: number }) {
+	const zone = zoneForToken(firstTokenId + rank - 1);
+	if (!zone) return null;
+	return (
+		<li
+			aria-hidden
+			className="pt-3 first:pt-0 pb-1 pl-3 font-mono text-micro uppercase tracking-[0.16em]"
+			style={{ color: `var(--z-${zone.id})` }}
+		>
+			{zone.name}
+		</li>
 	);
 }
 
@@ -37,6 +63,7 @@ function EmptySlotRow({
 }) {
 	return (
 		<li className="relative flex items-center h-10 3xl:h-11 4xl:h-12 pl-3 pr-3 4xl:px-5">
+			<ZoneBar rank={rank} firstTokenId={firstTokenId} />
 			<SlotCell rank={rank} firstTokenId={firstTokenId} />
 			<span className="relative flex-1 min-w-0 truncate font-mono text-micro uppercase tracking-[0.1em] text-faint">
 				{over ? "ended with no bids" : "no bids yet"}
@@ -130,7 +157,7 @@ function BidRow({
 						: "color-mix(in srgb, var(--foreground) 4%, transparent)",
 				}}
 			/>
-			{mine && <span aria-hidden className="absolute inset-y-0 left-0 w-[2px] bg-foreground" />}
+			<ZoneBar rank={rank} firstTokenId={firstTokenId} />
 
 			<SlotCell rank={rank} firstTokenId={firstTokenId} />
 			<span className="relative flex items-center gap-2 min-w-0 flex-1">
@@ -263,50 +290,64 @@ export function Standings({
 							Minted rows are shown only as far as winner history can currently be verified.
 						</p>
 					)}
-					<ol className="mt-3 [&>li:nth-child(even)]:bg-foreground/[0.025]">
-						{won.map((w) => (
-							<BidRow
-								key={`won-${w.tokenId}`}
-								bidId={w.id}
-								bidder={w.bidder}
-								amount={w.amount}
-								rank={w.tokenId - firstTokenId + 1}
-								firstTokenId={firstTokenId}
-								signal={signalFor(w.id, w.tokenId)}
-								tag="minted"
-								mine={w.bidder.toLowerCase() === youLc}
-								maxAmount={maxAmount}
-								enableEns={enableEns}
-							/>
+					<ol className="mt-3">
+						{[
+							...won.map((w) => ({
+								rank: w.tokenId - firstTokenId + 1 as number | null,
+								node: (
+									<BidRow
+										bidId={w.id}
+										bidder={w.bidder}
+										amount={w.amount}
+										rank={w.tokenId - firstTokenId + 1}
+										firstTokenId={firstTokenId}
+										signal={signalFor(w.id, w.tokenId)}
+										tag="minted"
+										mine={w.bidder.toLowerCase() === youLc}
+										maxAmount={maxAmount}
+										enableEns={enableEns}
+									/>
+								),
+								key: `won-${w.tokenId}`,
+							})),
+							...bids.map((b, i) => ({
+								rank: phase === "cancelled" ? null : won.length + i + 1,
+								node: (
+									<BidRow
+										bidId={b.id}
+										bidder={b.bidder}
+										amount={b.amount}
+										rank={phase === "cancelled" ? null : won.length + i + 1}
+										firstTokenId={firstTokenId}
+										signal={signalFor(b.id)}
+										tag={phase === "cancelled" ? "refund due" : undefined}
+										mine={b.bidder.toLowerCase() === youLc}
+										maxAmount={maxAmount}
+										enableEns={enableEns}
+										dim={phase === "cancelled"}
+									/>
+								),
+								key: `bid-${b.id}`,
+							})),
+							...(phase !== "cancelled"
+								? Array.from(
+										{ length: Math.max(0, maxUnits - won.length - bids.length) },
+										(_, i) => won.length + bids.length + i + 1,
+									).map((slot) => ({
+										rank: slot as number | null,
+										node: <EmptySlotRow rank={slot} over={over} firstTokenId={firstTokenId} />,
+										key: `slot-${slot}`,
+									}))
+								: []),
+						].map((row) => (
+							<Fragment key={row.key}>
+								{/* a zone name before each group of five days */}
+								{row.rank !== null && (row.rank - 1) % DAYS_PER_ZONE === 0 && (
+									<ZoneHeader rank={row.rank} firstTokenId={firstTokenId} />
+								)}
+								{row.node}
+							</Fragment>
 						))}
-						{bids.map((b, i) => (
-							<BidRow
-								key={b.id}
-								bidId={b.id}
-								bidder={b.bidder}
-								amount={b.amount}
-								rank={phase === "cancelled" ? null : won.length + i + 1}
-								firstTokenId={firstTokenId}
-								signal={signalFor(b.id)}
-								tag={phase === "cancelled" ? "refund due" : undefined}
-								mine={b.bidder.toLowerCase() === youLc}
-								maxAmount={maxAmount}
-								enableEns={enableEns}
-								dim={phase === "cancelled"}
-							/>
-						))}
-						{phase !== "cancelled" &&
-							Array.from(
-								{ length: Math.max(0, maxUnits - won.length - bids.length) },
-								(_, i) => won.length + bids.length + i + 1,
-							).map((slot) => (
-								<EmptySlotRow
-									key={`slot-${slot}`}
-									rank={slot}
-									over={over}
-									firstTokenId={firstTokenId}
-								/>
-							))}
 					</ol>
 
 					{isFull && phase === "active" && (

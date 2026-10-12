@@ -100,7 +100,7 @@ export function SignalsPanel({ s }: { s: AuctionState }) {
 						<div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
 							<span className="font-mono text-xs tabular-nums text-foreground">#{e.token}</span>
 							<span className="font-mono text-micro uppercase tracking-[0.12em] text-muted">
-								Day {e.day}, {e.zone}
+								Day {e.day}, {e.theme}, {e.zone}
 							</span>
 							{e.holder ? (
 								<a

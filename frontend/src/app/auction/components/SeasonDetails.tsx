@@ -173,6 +173,10 @@ export function SeasonDetails({
 			).join(", ")}. The route starts in a city read as a system and ends on land still forming.`,
 		},
 		{
+			q: "What are the daily themes?",
+			a: "Pale Kirill's starting point for each day. Every zone holds five things, one a day: a figure, a place, an event, an object and a feeling, from creator on Day 1 to love on Day 30. The full table is under the themes, above.",
+		},
+		{
 			q: "What is a signal?",
 			a: `An optional message for the day your bid wins, or a signal to anyone at all, up to ${MAX_SIGNAL_BYTES} bytes. Add it with your bid or later, even after the sale. Once written it never changes. The artists read it when that day is made, and may use it or leave it. A signal never changes price or rank, and it is public.`,
 		},
