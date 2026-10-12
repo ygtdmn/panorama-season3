@@ -6,6 +6,10 @@ import { useEffect, useRef } from "react";
 // These are studio generations kept with the app (public/season3/strip); swap in the final
 // header images when the season starts.
 export const STRIP = Array.from({ length: 17 }, (_, i) => `/season3/strip/${String(i).padStart(2, "0")}.webp`);
+/** Where the title screen opens, in frames: a quarter frame before 08, so the floating house sits
+ *  whole beside the title with the slab on stilts behind it. The strip still holds every frame;
+ *  the earlier ones come round after the last. */
+const START_FRAME = 7.75;
 
 const LINKS: { label: string; href: string }[] = [
 	{ label: "The work", href: "#work" },
@@ -40,10 +44,12 @@ function useSteerableDrift(
 		if (!viewport || !track) return;
 
 		const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		// Every frame is 16:9, so the start is a fixed fraction of the loop.
 		let offset = 0;
 		let velocity = reduced ? 0 : AUTO_SPEED; // px/s; positive travels on along the route
 		let resumeAt = 0;
 		let loopWidth = track.scrollWidth / 2;
+		offset = (loopWidth * START_FRAME) / STRIP.length;
 		let last = performance.now();
 		let raf = 0;
 
@@ -181,7 +187,13 @@ export function HeroScreen({
 			className="relative w-full h-full overflow-hidden bg-screen-blue select-none touch-pan-y cursor-grab data-[dragging]:cursor-grabbing outline-none focus-visible:ring-2 focus-visible:ring-sky-pink"
 		>
 			<div aria-hidden className="absolute inset-0">
-				<div ref={trackRef} className="flex h-full w-max will-change-transform">
+				<div
+					ref={trackRef}
+					className="flex h-full w-max will-change-transform"
+					// First paint already sits on START_FRAME (the track is two copies of the strip),
+					// so the hero never flashes frame 00 before the drift takes over.
+					style={{ transform: `translate3d(-${(START_FRAME / (STRIP.length * 2)) * 100}%,0,0)` }}
+				>
 					{[...STRIP, ...STRIP].map((src, i) => (
 						// eslint-disable-next-line @next/next/no-img-element
 						<img
@@ -189,8 +201,10 @@ export function HeroScreen({
 							src={src}
 							alt=""
 							draggable={false}
-							loading={i < 3 ? "eager" : "lazy"}
-							className="h-full w-auto max-w-none block pointer-events-none"
+							width={1600}
+							height={900}
+							loading={i >= START_FRAME - 1 && i <= START_FRAME + 2 ? "eager" : "lazy"}
+							className="h-full w-auto aspect-[16/9] max-w-none block pointer-events-none"
 						/>
 					))}
 				</div>
