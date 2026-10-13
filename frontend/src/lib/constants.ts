@@ -42,7 +42,11 @@ export function getEvmNowUrl(address: string): string {
 	return `https://evm.now/address/${address}/code`;
 }
 
-export const OG_IMAGE_URL = `${CDN_BASE_URL}/season3/season3-og-preview.webp`;
+/** The share card: 1200x630 JPEG, the title screen at the floating house (immutable; a new
+ *  card goes to a new dated folder). */
+export const OG_IMAGE_URL = `${CDN_BASE_URL}/season3/og/2026-10-13/season3-og.jpg`;
+export const OG_IMAGE_ALT =
+	"Panorama Season 3, Nothing Remains the Same. Yigit Duman x Pale Kirill. A wooden house floats on a concrete pillar beside a pine forest under a torn pink sky.";
 
 export function getBlockExplorerAddressUrl(address: string): string {
 	return `${BLOCK_EXPLORER_URL}/address/${address}`;

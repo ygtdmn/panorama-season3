@@ -4,7 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { themeInitScript } from "@/lib/themeScript";
 import { railMaxInitScript } from "@/lib/railMax";
-import { AUCTION_SITE_URL, OG_IMAGE_URL } from "@/lib/constants";
+import { AUCTION_SITE_URL, OG_IMAGE_ALT, OG_IMAGE_URL } from "@/lib/constants";
 
 // Two layers of type. Panorama's own: Hanken Grotesk for text and JetBrains Mono for labels,
 // as on every Panorama site. Kirill's game layer: Jacquard 24, a pixel blackletter, for the
@@ -48,7 +48,7 @@ const newsreader = Newsreader({
 
 const TITLE = "Panorama Season 3: Nothing Remains the Same";
 const description =
-	"Bid on Season 3 of Panorama, an autonomous generative artwork: thirty days through six zones, from interface to abstract. A collaboration between Yigit Duman and Pale Kirill.";
+	"Thirty days through six zones, from interface to abstract. Season 3 of Panorama, an autonomous generative artwork, by Yigit Duman and Pale Kirill. Auction opens Oct 19, 17:00 UTC.";
 
 export const metadata: Metadata = {
 	metadataBase: new URL(AUCTION_SITE_URL),
@@ -68,14 +68,14 @@ export const metadata: Metadata = {
 		url: AUCTION_SITE_URL,
 		siteName: "Panorama",
 		locale: "en_US",
-		images: [{ url: OG_IMAGE_URL, width: 1920, height: 1080, alt: "Panorama Season 3", type: "image/webp" }],
+		images: [{ url: OG_IMAGE_URL, width: 1200, height: 630, alt: OG_IMAGE_ALT, type: "image/jpeg" }],
 	},
 	twitter: {
 		card: "summary_large_image",
 		title: TITLE,
 		description,
 		creator: "@yigitduman",
-		images: [OG_IMAGE_URL],
+		images: [{ url: OG_IMAGE_URL, alt: OG_IMAGE_ALT }],
 	},
 };
 
