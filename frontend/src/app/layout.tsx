@@ -48,7 +48,7 @@ const newsreader = Newsreader({
 
 const TITLE = "Panorama Season 3: Nothing Remains the Same";
 const description =
-	"Thirty days through six zones, from interface to abstract. Season 3 of Panorama, an autonomous generative artwork, by Yigit Duman and Pale Kirill. Auction opens Oct 19, 17:00 UTC.";
+	"Thirty days through six zones, from interface to abstract. Panorama Season 3 by Yigit Duman and Pale Kirill. Auction opens Oct 19, 17:00 UTC.";
 
 export const metadata: Metadata = {
 	metadataBase: new URL(AUCTION_SITE_URL),
@@ -59,6 +59,7 @@ export const metadata: Metadata = {
 		shortcut: "/favicon.png",
 		apple: "/favicon.png",
 	},
+	alternates: { canonical: "/" },
 	authors: [{ name: "Yigit Duman" }, { name: "Pale Kirill" }],
 	robots: "index, follow",
 	openGraph: {
