@@ -70,7 +70,7 @@ function Screen({ image, children }: { image: string; children: React.ReactNode 
 /** The signal, said once and plainly: the one new thing about this sale. */
 function SignalsExplainer() {
 	const points = [
-		{ n: "01", t: "Write it now or later", d: `A word, a wish, a place, a memory, or a signal to anyone at all. Up to ${MAX_SIGNAL_BYTES} bytes, optional. Send it with your bid or add it any time later, even after the sale. Once written, it stays as written.` },
+		{ n: "01", t: "Write it now or later", d: `A word, a wish, a place, a memory, or a signal to anyone at all. Up to ${MAX_SIGNAL_BYTES} characters, optional. Send it with your bid or add it any time later, even after the sale. Once written, it stays as written.` },
 		{ n: "02", t: "It lands on your day", d: "Your bid's rank decides your day. The signal travels with the bid to the day it wins. If the winning bid carried none, whoever holds the day can add one." },
 		{ n: "03", t: "The artists read it", d: "When that day is made, Yigit and Pale Kirill read its signal and decide whether to use it." },
 	];
@@ -81,7 +81,7 @@ function SignalsExplainer() {
 			<div className="flex flex-col gap-8">
 				<div className="flex flex-col gap-5">
 					<p className="game-logo leading-[0.95] text-[clamp(2.2rem,1.4rem+2.4vw,3.8rem)] max-w-[24ch]">
-						Send something to the day you win.
+						A frequency for a day not yet made.
 					</p>
 					<p className="font-sans text-[17px] text-foreground/90 leading-relaxed max-w-[56ch] [text-shadow:1px_1px_0_rgba(0,0,0,0.6)]">
 						Every bid can carry a signal. The market still sets each day&apos;s mood. A signal adds one more
@@ -106,7 +106,7 @@ function SignalsExplainer() {
 
 function SaleSteps({ incrementPct }: { incrementPct: number }) {
 	const steps = [
-		{ n: "01", t: "Bid your maximum", d: "Enter the most you would pay, in steps of 0.001 ETH, with a signal if you like, or add one later. Hold up to two bids and raise either at any time." },
+		{ n: "01", t: "Bid your maximum", d: "Enter the most you would pay. Hold up to two bids and raise either at any time." },
 		{ n: "02", t: "The top thirty stay", d: `A new bid must beat the lowest of the thirty by ${incrementPct}%, at an amount nobody else holds. The bid it pushes out is refunded in the same transaction.` },
 		{ n: "03", t: "Everyone pays the floor", d: "At close, every winner pays the thirtieth-highest bid. Anything above it comes back at settlement." },
 		{ n: "04", t: "Higher bids, earlier days", d: "The top bid takes #181, the first day of Interface. Each rank down takes the next day along the route." },
@@ -178,7 +178,7 @@ export function SeasonDetails({
 		},
 		{
 			q: "What is a signal?",
-			a: `An optional message for the day your bid wins, or a signal to anyone at all, up to ${MAX_SIGNAL_BYTES} bytes. Add it with your bid or later, even after the sale. Once written it never changes. The artists read it when that day is made, and may use it or leave it. A signal never changes price or rank, and it is public.`,
+			a: `An optional message for the day your bid wins, or a signal to anyone at all, up to ${MAX_SIGNAL_BYTES} characters. Add it with your bid or later, even after the sale. Once written it never changes. The artists read it when that day is made, and may use it or leave it. A signal never changes price or rank, and it is public.`,
 		},
 		{
 			q: "Can I add a signal later?",
@@ -231,11 +231,12 @@ export function SeasonDetails({
 			q: "Has the contract been audited?",
 			a: (
 				<>
-					It is the Season 2 auction contract, independently audited in July 2026, with these changes:
-					thirty tableaus starting at #181, the signal, two bids per wallet instead of four, amounts in
-					steps of 0.001 ETH, unique amounts once all thirty days are held, and signals moved to a
-					separate controller contract. These changes were not re-audited.{" "}
-					<Ext href={SEASON_2_AUDIT_REPORT_URL}>Audit</Ext>.
+					Yes. It is built on the Season 2 auction contract, which was independently audited in July 2026
+					and ran the Season 2 sale. Season 3 changes only a few rules: thirty tableaus from #181, two bids
+					per wallet, amounts in steps of 0.001 ETH, unique amounts once all thirty days are held, and
+					signals, kept in their own small contract. Because the changes are small, they were reviewed with
+					LLM auditing tools and covered by the full test suite rather than a second formal audit.{" "}
+					<Ext href={SEASON_2_AUDIT_REPORT_URL}>Read the Season 2 audit</Ext>.
 				</>
 			),
 		},
@@ -243,7 +244,7 @@ export function SeasonDetails({
 			q: "What is $PANO?",
 			a: (
 				<>
-					The ERC-20 whose price sets the work&apos;s mood. <Ext href={TERMINAL_URL}>Trade it on the terminal</Ext>.
+					The ERC-20 whose price sets the work&apos;s mood, launched with SuperRare as part of its Liquid Editions program. <Ext href={TERMINAL_URL}>Trade it on the terminal</Ext>.
 				</>
 			),
 		},

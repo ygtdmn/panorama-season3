@@ -1,19 +1,21 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { CDN_BASE_URL } from "@/lib/constants";
 
-// The season's own strip, travelling through the title screen from Interface to Abstract.
-// These are studio generations kept with the app (public/season3/strip); swap in the final
-// header images when the season starts.
-export const STRIP = Array.from({ length: 17 }, (_, i) => `/season3/strip/${String(i).padStart(2, "0")}.webp`);
+// The season's own strip, travelling through the title screen from Interface to Abstract: the 21
+// frames of the studio panorama "S3 styles, checkpoint 1500", served from the CDN (1600x900 webp,
+// immutable). A refresh goes to a new dated folder rather than overwriting this one.
+const STRIP_BASE = `${CDN_BASE_URL}/season3/strip/2026-10-13`;
+export const STRIP = Array.from({ length: 21 }, (_, i) => `${STRIP_BASE}/${String(i).padStart(2, "0")}.webp`);
 /** Where the title screen opens, in frames: a quarter frame before 08, so the floating house sits
  *  whole beside the title with the slab on stilts behind it. The strip still holds every frame;
  *  the earlier ones come round after the last. */
 const START_FRAME = 7.75;
 
 const LINKS: { label: string; href: string }[] = [
+	{ label: "Statement", href: "#statement" },
 	{ label: "The work", href: "#work" },
-	{ label: "The themes", href: "#themes" },
 	{ label: "The route", href: "#route" },
 	{ label: "Signals", href: "#signals" },
 	{ label: "Questions", href: "#questions" },
@@ -233,9 +235,8 @@ export function HeroScreen({
 							the Same
 						</h1>
 						<p className="max-w-[46ch] font-sans text-[clamp(0.95rem,0.9rem+0.25vw,1.1rem)] leading-relaxed text-white/90 [text-shadow:1px_1px_0_rgba(0,0,0,0.7)]">
-							Panorama is one continuous artwork, a tableau a day, its mood set by the price
-							of $PANO. Season 3 is thirty days with Pale Kirill, out of the city and into land
-							still forming.
+							You have lived in many homes. Some were houses. Some were people, cities, a single
+							song. This one is a panorama, and every day a market decides how it feels.
 						</p>
 					</div>
 

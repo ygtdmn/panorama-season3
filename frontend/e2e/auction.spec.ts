@@ -198,12 +198,12 @@ test.describe("signals", () => {
 
 		const field = page.getByLabel("Signal", { exact: true });
 		await field.fill("a".repeat(281));
-		await expect(page.getByText("281 / 280 bytes")).toBeVisible();
+		await expect(page.getByText("281 / 280", { exact: true })).toBeVisible();
 		await expect(page.getByRole("button", { name: "signal too long" })).toBeDisabled();
 
 		// Trimmed before counting and sending; the newline stays.
 		await field.fill("  the street I grew up on\nat dusk  ");
-		await expect(page.getByText("31 / 280 bytes")).toBeVisible();
+		await expect(page.getByText("31 / 280", { exact: true })).toBeVisible();
 		await page.getByRole("button", { name: /^place bid$/ }).click();
 		// Write-once: the sanitized text comes back for a confirm before anything is sent.
 		const confirm = page.getByRole("group", { name: "Confirm signal" });

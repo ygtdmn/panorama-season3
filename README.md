@@ -21,7 +21,7 @@ The zones come from Pale Kirill's day generator. The market still sets each day'
 
 ## Signals
 
-A signal is optional: up to 280 bytes of text for the day a bid wins, or simply a signal to the universe. The artists may use or ignore any signal. A signal never affects price, rank, or settlement. Signals are public.
+A signal is optional: up to 280 characters of text for the day a bid wins, or simply a signal to the universe. The artists may use or ignore any signal. A signal never affects price, rank, or settlement. Signals are public.
 
 Signals live in a separate contract, `PanoramaSeason3SignalController`.
 

@@ -2,7 +2,13 @@
 
 import { CDN_BASE_URL, SITE_URL } from "@/lib/constants";
 import { SectionHead } from "./SeasonDetails";
-import { STRIP } from "./HeroPanorama";
+
+/**
+ * The three cards' pictures, one per season (S1 #70, the S2 header, studio frame 02), joined
+ * edge to edge with the production seam workflow (Klein green-fill + SDXL) on
+ * Comfy Cloud (1024px band into S2; 1280px band and a stitch prompt into S3), so the row reads as one strip across the gaps.
+ */
+const WORK_BASE = `${CDN_BASE_URL}/season3/work/2026-10-13-v2`;
 
 /** Panorama's seasons as a game's chapter select: two played, this one open. */
 const CHAPTERS = [
@@ -12,7 +18,7 @@ const CHAPTERS = [
 		title: "Myth",
 		by: "Yigit Duman",
 		status: "complete",
-		image: `${CDN_BASE_URL}/optimized_updated_2026-07-01.webp`,
+		image: `${WORK_BASE}/1.webp`,
 		href: `${SITE_URL}/canvas?id=70`,
 	},
 	{
@@ -21,7 +27,7 @@ const CHAPTERS = [
 		title: "Anthology of Mankind",
 		by: "with DeltaSauce",
 		status: "ends Oct 19",
-		image: `${CDN_BASE_URL}/season2/header/1.webp`,
+		image: `${WORK_BASE}/2.webp`,
 		href: `${SITE_URL}/canvas`,
 	},
 ] as const;
@@ -88,7 +94,7 @@ export function WorkChapters() {
 						}}
 						className="game-panel flex flex-col h-full border-laser/70 shadow-[0_0_24px_rgba(255,31,31,0.25)]"
 					>
-						<ChapterImage src={STRIP[2]} />
+						<ChapterImage src={`${WORK_BASE}/3.webp`} />
 						<div className="flex flex-col gap-1 p-3">
 							<span className="font-mono text-[10px] uppercase tracking-[0.16em] text-laser">
 								Season 3 / #181 to #210

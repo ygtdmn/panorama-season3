@@ -50,7 +50,7 @@ const ERROR_COPY: Record<string, (args: readonly unknown[]) => string> = {
 		"Minting is still available. Continue settlement instead of starting refunds.",
 	// PanoramaSeason3SignalController (also reached through placeBid, which forwards the signal).
 	SignalTooLong: (a) =>
-		`A signal holds at most ${String(a[0] ?? 280)} bytes. Shorten it and send again.`,
+		`A signal holds at most ${String(a[0] ?? 280)} characters. Shorten it and send again.`,
 	SignalAlreadySet: () => "This already has a signal. Signals can't be changed.",
 	EmptySignal: () => "Write something first.",
 	NotTokenHolder: () => "Only the wallet holding this day can add its signal.",

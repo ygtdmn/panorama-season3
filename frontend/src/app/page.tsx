@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { LuInfo, LuMaximize2, LuMinimize2 } from "react-icons/lu";
+import { applyRailMax, readRailMaxAttribute } from "@/lib/railMax";
 import Link from "next/link";
 import { WalletPill } from "@/app/components/WalletPill";
 import { useToast } from "@/app/components/Toast";
@@ -12,16 +14,16 @@ import {
 import { describeAuctionError } from "@/lib/auctionErrors";
 import type { WriteName } from "@/app/auction/hooks/useAuctionActions";
 import { useAuctionSession } from "@/app/auction/hooks/useAuctionSession";
-import { dayLabelForToken, SEASON_3_ZONES, zoneForToken } from "@/lib/season3Zones";
+import { dayLabelForToken, SEASON_3_ZONES, themeForToken, zoneForToken } from "@/lib/season3Zones";
 import { measureSignal, signalForBid } from "@/lib/signal";
 import { SignalConfirm, SignalEditor, SignalText } from "@/app/auction/components/SignalEditor";
 import { HeroScreen } from "@/app/auction/components/HeroPanorama";
 import { DemoBar } from "@/app/auction/components/DemoBar";
 import { Standings } from "@/app/auction/components/Standings";
 import { landingRank, RouteBoard } from "@/app/auction/components/RouteBoard";
-import { SeasonDetails, SectionHead } from "@/app/auction/components/SeasonDetails";
+import { Kirill, SeasonDetails, SectionHead } from "@/app/auction/components/SeasonDetails";
 import { WorkChapters } from "@/app/auction/components/WorkChapters";
-import { DailyThemes } from "@/app/auction/components/DailyThemes";
+import { ArtistStatement } from "@/app/auction/components/ArtistStatement";
 import {
   pendingActionLabel,
   TransactionStatus,
@@ -71,6 +73,27 @@ const GHOST =
 const CHIP =
   "game-btn text-[11px] px-2.5 py-1 cursor-pointer";
 const PANEL = "relative game-panel p-5";
+
+/** A rule one tap or hover away, instead of a paragraph under the field. */
+function InfoTip({ label, text }: { label: string; text: string }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      data-tooltip={text}
+      data-tooltip-wrap=""
+      data-tooltip-tap=""
+      className="inline-flex items-center justify-center w-7 h-7 text-faint hover:text-foreground transition-colors cursor-help"
+    >
+      <LuInfo size={14} aria-hidden />
+    </button>
+  );
+}
+
+const SIGNAL_INFO =
+  "Sent to the day your bid wins. Public and permanent once written. Send it now or add it any time later, even after the sale. Yigit and Pale Kirill read it when your day is made, and may use it or leave it.";
+const BID_INFO =
+  "Enter the most you would pay; it is held while your bid stays in the top thirty. At the close every winner pays the same price, the thirtieth-highest bid, and the rest of your maximum is refunded at settlement. Higher bids take earlier days. If you are outbid, your bid is refunded at once.";
 
 function Countdown({
   now,
@@ -244,6 +267,17 @@ export default function AuctionPage() {
   // it was opened for, so editing either the amount or the signal drops back to the form.
   const [bidConfirm, setBidConfirm] = useState<{ bid: string; signal: string } | null>(null);
   const [raiseInputs, setRaiseInputs] = useState<Record<number, string>>({});
+  // Desktop full-width bid panel. The LAYOUT is driven by html[data-rail-max] + CSS, stamped
+  // before first paint, so a remembered choice never jumps in after hydration; this state only
+  // mirrors it for the button's label.
+  const [railMax, setRailMax] = useState(false);
+  useEffect(() => {
+    setRailMax(readRailMaxAttribute());
+  }, []);
+  const updateRailMax = (next: boolean) => {
+    setRailMax(next);
+    applyRailMax(next);
+  };
   // The one open signal editor: "bid:<id>" or "day:<token>".
   const [editing, setEditing] = useState<string | null>(null);
   // The last submitted tx survives reset() so the explorer link stays after confirmation.
@@ -474,19 +508,24 @@ export default function AuctionPage() {
   const beamZone = beamToken === null ? undefined : zoneForToken(beamToken);
   const beamLabel = beamToken === null ? undefined : dayLabelForToken(beamToken);
 
-  /** Thirty ticks in zone colours: a held day is solid, an open one is faint. */
+  /**
+   * Thirty ticks in zone colours, one per day in route order: a held day is solid, an open one
+   * faint, and the day a bid being typed would take is lifted and outlined, so the strip answers
+   * "where would I land" before any text does.
+   */
   const heldTicks = (
-    <div className="flex gap-[2px]" aria-hidden>
+    <div className="flex items-end gap-[2px] h-3.5" aria-hidden>
       {Array.from({ length: s.maxUnits || 30 }, (_, i) => {
         const zone = SEASON_3_ZONES[Math.min(SEASON_3_ZONES.length - 1, Math.floor(i / 5))];
         const held = i < slotsFilled;
+        const beam = beamRank === i + 1;
         return (
           <span
             key={i}
-            className="h-2 flex-1 transition-opacity duration-500"
+            className={`flex-1 transition-[opacity,height] duration-300 ${beam ? "h-3.5 outline outline-1 outline-white" : "h-2"}`}
             style={{
               background: `var(--z-${zone.id})`,
-              opacity: held ? 1 : 0.18,
+              opacity: held || beam ? 1 : 0.18,
             }}
           />
         );
@@ -609,19 +648,39 @@ export default function AuctionPage() {
             </div>
           )}
         </div>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-baseline justify-between gap-3">
-            <Label>Days held</Label>
-            <span className="font-mono text-xs tabular-nums text-foreground">
-              {slotsFilled}
-              <span className="text-faint"> / {s.maxUnits}</span>
-            </span>
-          </div>
+        <div className="flex flex-col gap-2.5">
           {heldTicks}
-          <div className="flex items-baseline justify-between gap-3 pt-1">
-            <Label>{s.phase === "settled" ? "Final price" : "Clearing now"}</Label>
-            <span className="font-mono text-xs tabular-nums text-foreground">
-              {eth(heroClearing)} ETH
+          <div className="flex items-baseline justify-between gap-3">
+            <span
+              tabIndex={0}
+              data-tooltip={
+                s.phase === "settled"
+                  ? "Days sold at settlement, one token each, in route order."
+                  : "Days held by a bid right now. The top thirty bids hold days 1 to 30, highest first."
+              }
+              data-tooltip-wrap=""
+              className="inline-flex items-baseline gap-2 cursor-help outline-none"
+            >
+              <span className="font-mono text-sm tabular-nums text-foreground">
+                {slotsFilled}
+                <span className="text-faint">/{s.maxUnits}</span>
+              </span>
+              <Label>{s.phase === "settled" ? "Days sold" : "Days with a bid"}</Label>
+            </span>
+            <span
+              tabIndex={0}
+              data-tooltip={
+                s.phase === "settled"
+                  ? "What every winner paid: the thirtieth-highest bid."
+                  : "What every winner pays if bidding ended now: the thirtieth-highest bid, or the reserve while days are open."
+              }
+              data-tooltip-wrap=""
+              className="inline-flex items-baseline gap-2 cursor-help outline-none"
+            >
+              <Label>{s.phase === "settled" ? "Final price" : "Clearing now"}</Label>
+              <span className="font-mono text-sm tabular-nums text-foreground">
+                {eth(heroClearing)} ETH
+              </span>
             </span>
           </div>
         </div>
@@ -678,94 +737,119 @@ export default function AuctionPage() {
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-baseline justify-between gap-3">
-                <Label>
-                  01 / {s.yourBidCount > 0 ? "Place another bid" : "Place a bid"}
-                </Label>
-                <button
-                  type="button"
-                  onClick={() => setBidInput(ethExact(s.minimumBid))}
-                  className={CHIP}
-                >
-                  min {ethCeil(s.minimumBid)} ETH
-                </button>
-              </div>
-              <div className="game-slot flex items-baseline gap-3 px-3 py-2 focus-within:border-sky-pink transition-colors duration-200">
-                <input
-                  value={bidInput}
-                  onChange={(e) => setBidInput(e.target.value)}
-                  inputMode="decimal"
-                  placeholder={ethCeil(s.minimumBid)}
-                  aria-label="Bid amount in ETH"
-                  aria-invalid={bidInvalid}
-                  aria-describedby={bidInvalid ? "bid-amount-error" : "bid-landing"}
-                  className="bg-transparent outline-none font-sans font-semibold text-4xl tabular-nums tracking-[-0.01em] w-full text-foreground placeholder:text-faint placeholder:font-normal"
-                />
-                <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted">
-                  ETH
-                </span>
-              </div>
-              {bidInvalid ? (
-                <p
-                  id="bid-amount-error"
-                  className="font-mono text-micro uppercase tracking-[0.12em] text-signal"
-                  role="alert"
-                >
-                  Enter one plain decimal amount, for example 0.15 or 0,15.
-                </p>
-              ) : (
-                <p
-                  id="bid-landing"
-                  aria-live="polite"
-                  className="flex items-center gap-2 font-mono text-micro uppercase tracking-[0.12em] text-muted min-h-[1.3em]"
-                >
-                  {beamZone && beamLabel ? (
-                    <>
-                      <span
-                        aria-hidden
-                        className="w-2 h-2 shrink-0"
-                        style={{ background: `var(--z-${beamZone.id})` }}
+          <div className="flex flex-col gap-3">
+            {/* Bid: the most you would pay, the minimum one tap away, and underneath, inside the
+                same field, the day it would take right now (or why it can't land). The day is a
+                standing, not a claim: it pulses "now", and its tooltip says how higher bids move it. The strip
+                above and the route board light the same day. */}
+            {(() => {
+              const problem = bidInvalid
+                ? "Enter one plain decimal amount, for example 0.15 or 0,15."
+                : bidOffTick
+                  ? "Bids go in steps of 0.001 ETH"
+                  : bidTooLow
+                    ? `Below the minimum of ${ethCeil(s.minimumBid)} ETH`
+                    : bidTaken
+                      ? "Someone holds this amount. Try 0.001 more or less"
+                      : null;
+              const theme = beamToken !== null ? themeForToken(beamToken) : undefined;
+              const lit = !problem && beamZone && theme && beamToken !== null && beamRank !== null;
+              // Nothing typed yet: the day a bid at the minimum would take now.
+              const minRank =
+                biddable && bidInput.trim() === "" && s.minimumBid > 0n
+                  ? Math.min(landingRank(s.minimumBid, s.allBids, s.wonBids.length), s.maxUnits)
+                  : null;
+              const minTheme = minRank !== null ? themeForToken(s.firstTokenId + minRank - 1) : undefined;
+              return (
+                <div className="flex flex-col gap-1.5">
+                  <span className="inline-flex items-center gap-1">
+                    <label htmlFor="bid-amount" className="font-mono text-micro uppercase tracking-[0.14em] text-muted">
+                      {s.yourBidCount > 0 ? "Second bid" : "Bid"}
+                    </label>
+                    <InfoTip label="How bidding works" text={BID_INFO} />
+                  </span>
+                  <div
+                    className={`game-slot flex flex-col gap-1 px-3.5 pt-2.5 pb-2.5 focus-within:border-sky-pink transition-colors duration-200 ${
+                      problem ? "!border-laser/70" : ""
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-mono text-micro uppercase tracking-[0.14em] text-faint">Your maximum</span>
+                      <button
+                        type="button"
+                        onClick={() => setBidInput(ethExact(s.minimumBid))}
+                        className={CHIP}
+                      >
+                        min {ethCeil(s.minimumBid)} ETH
+                      </button>
+                    </div>
+                    <div className="flex items-baseline gap-3">
+                      <input
+                        id="bid-amount"
+                        value={bidInput}
+                        onChange={(e) => setBidInput(e.target.value)}
+                        inputMode="decimal"
+                        placeholder={ethCeil(s.minimumBid)}
+                        aria-label="Bid amount in ETH"
+                        aria-invalid={bidInvalid}
+                        aria-describedby="bid-landing"
+                        className="bg-transparent outline-none font-sans font-semibold text-4xl tabular-nums tracking-[-0.01em] w-full text-foreground placeholder:text-faint placeholder:font-normal"
                       />
-                      <span>
-                        {`Lands on #${beamToken} / ${beamLabel} at today's ranking`}
-                      </span>
-                    </>
-                  ) : bidOffTick ? (
-                    <span className="text-signal">Bids go in steps of 0.001 ETH</span>
-                  ) : bidTooLow ? (
-                    <span className="text-signal">below minimum</span>
-                  ) : bidTaken ? (
-                    <span className="text-signal">Someone holds this amount. Try 0.001 more or less</span>
-                  ) : (
-                    <span className="text-faint">
-                      Type an amount to see which day it takes
-                    </span>
-                  )}
-                </p>
-              )}
-            </div>
+                      <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted">ETH</span>
+                    </div>
+                    <p
+                      id="bid-landing"
+                      aria-live="polite"
+                      role={problem ? "alert" : undefined}
+                      tabIndex={lit ? 0 : undefined}
+                      data-tooltip={
+                        lit
+                          ? "Where your bid stands right now. Each higher bid pushes it one day later; out of the top thirty, it is refunded. Raise it any time to move earlier."
+                          : undefined
+                      }
+                      data-tooltip-wrap=""
+                      className={`flex items-center gap-2 min-h-[1.4em] font-mono text-micro outline-none ${lit ? "cursor-help" : ""}`}
+                    >
+                      {problem ? (
+                        <span className="text-signal">{problem}</span>
+                      ) : lit ? (
+                        <>
+                          <span className="sr-only">{`Lands on #${beamToken} / ${beamLabel} at today's ranking. Higher bids push it to later days.`}</span>
+                          <span aria-hidden className="w-1.5 h-1.5 rounded-full shrink-0 animate-pulse" style={{ background: `var(--z-${beamZone.id})` }} />
+                          <span aria-hidden className="text-muted truncate">
+                            now on <span className="text-foreground">day {beamRank}</span>
+                            {" / "}
+                            <span style={{ color: `var(--z-${beamZone.id})` }}>{theme.theme}</span>
+                          </span>
+                        </>
+                      ) : minRank !== null && minTheme ? (
+                        <span className="text-faint">
+                          at the minimum, day {minRank} / {minTheme.theme}
+                        </span>
+                      ) : (
+                        <span className="text-faint">Type an amount to see which day it takes</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
 
-            {/* Signal: optional, sent with the bid in the same transaction, or added later from
-                Your bids (and Your days after the sale). Write-once: never changed or cleared. */}
-            <div className="flex flex-col gap-2.5">
-              <div className="flex items-baseline justify-between gap-3">
-                <label
-                  htmlFor="bid-signal"
-                  className="font-mono text-micro uppercase tracking-[0.14em] text-muted"
-                >
-                  02 / Signal <span className="text-faint">(optional, add it now or later)</span>
-                </label>
-                <span
-                  id="bid-signal-count"
-                  aria-live="polite"
-                  className={`font-mono text-micro tabular-nums ${
-                    signalDraft.over ? "text-signal" : "text-faint"
-                  }`}
-                >
-                  {signalDraft.bytes} / {signalDraft.max} bytes
+            {/* Signal: optional, always in view. Sent with the bid in the same transaction, or
+                added later from Your bids (and Your days after the sale). Write-once: never
+                changed or cleared. */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-1">
+                  <label
+                    htmlFor="bid-signal"
+                    className="font-mono text-micro uppercase tracking-[0.14em] text-muted"
+                  >
+                    Signal
+                  </label>
+                  <InfoTip label="About signals" text={SIGNAL_INFO} />
                 </span>
+                <span className="font-mono text-micro uppercase tracking-[0.12em] text-faint">optional</span>
               </div>
               <div className="relative">
                 <textarea
@@ -775,23 +859,24 @@ export default function AuctionPage() {
                   onChange={(e) => setSignalInput(e.target.value)}
                   rows={3}
                   placeholder="A word, a wish, a place, a memory."
-                  aria-describedby="bid-signal-help bid-signal-count"
+                  aria-describedby="bid-signal-count"
                   aria-invalid={signalDraft.over}
-                  className="game-slot relative w-full resize-y outline-none font-sans text-[16px] leading-relaxed text-foreground placeholder:text-faint px-3.5 py-3 focus:border-sky-pink transition-colors"
+                  className="game-slot relative w-full resize-y outline-none font-sans text-[16px] leading-relaxed text-foreground placeholder:text-faint px-3.5 pt-3 pb-7 focus:border-sky-pink transition-colors"
                 />
-              </div>
-              <p id="bid-signal-help" className="font-sans text-xs text-muted leading-relaxed">
-                Write one now or add it any time later, even after the sale. Once
-                written, it stays as written: public and permanent. Yigit and Pale
-                Kirill read it when your day is made, and may use it or leave it.
-              </p>
-              {signalDraft.over && (
-                <p
-                  className="font-mono text-micro uppercase tracking-[0.12em] text-signal"
-                  role="alert"
+                <span
+                  id="bid-signal-count"
+                  aria-live="polite"
+                  aria-label={`${signalDraft.bytes} of ${signalDraft.max} characters`}
+                  className={`pointer-events-none absolute right-3 bottom-2.5 font-mono text-micro tabular-nums ${
+                    signalDraft.over ? "text-signal" : "text-faint"
+                  }`}
                 >
-                  Over the limit by {signalDraft.bytes - signalDraft.max} bytes. Shorten
-                  it to send.
+                  {signalDraft.bytes} / {signalDraft.max}
+                </span>
+              </div>
+              {signalDraft.over && (
+                <p className="font-sans text-xs text-signal" role="alert">
+                  Over the limit by {signalDraft.bytes - signalDraft.max} characters. Shorten it to send.
                 </p>
               )}
             </div>
@@ -1253,27 +1338,55 @@ export default function AuctionPage() {
       {/* SALE: the route board (the auction board itself) beside the bid console. */}
       <div
         id="sale"
-        className="scroll-mt-4 px-5 md:px-8 xl:px-12 pt-12 md:pt-16 pb-16 grid gap-x-10 xl:gap-x-14 gap-y-14 lg:grid-cols-[minmax(0,1fr)_25rem] xl:grid-cols-[minmax(0,1fr)_27rem] 3xl:grid-cols-[minmax(0,1fr)_32rem]"
+        className="sale-grid scroll-mt-4 px-5 md:px-8 xl:px-12 pt-12 md:pt-16 pb-16 grid gap-x-10 xl:gap-x-14 gap-y-14 lg:grid-cols-[minmax(0,1fr)_25rem] xl:grid-cols-[minmax(0,1fr)_27rem] 3xl:grid-cols-[minmax(0,1fr)_32rem]"
       >
-        <aside className="order-first lg:order-last lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto overlay-scroll-content">
-          <div className="game-titlebar px-3 py-1.5 text-[14px]">bid</div>
+        <aside className="sale-console order-first lg:order-last lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto overlay-scroll-content">
+          <div className="game-titlebar px-3 py-1.5 text-[14px] flex items-center justify-between gap-3">
+            <span>bid</span>
+            <button
+              type="button"
+              onClick={() => updateRailMax(!railMax)}
+              title={railMax ? "Exit full width" : "Full width"}
+              aria-label={railMax ? "Exit full-width bid panel" : "Expand bid panel to full width"}
+              aria-pressed={railMax}
+              className="hidden lg:inline-flex items-center justify-center w-6 h-6 -mr-1 text-white/80 hover:text-white cursor-pointer"
+            >
+              {/* Both icons render; CSS keyed on html[data-rail-max] shows the right one, so a
+                  remembered choice never swaps icons after hydration. */}
+              <span className="rail-icon-max inline-flex">
+                <LuMaximize2 size={14} />
+              </span>
+              <span className="rail-icon-restore inline-flex">
+                <LuMinimize2 size={14} />
+              </span>
+            </button>
+          </div>
           {consoleBody}
         </aside>
 
-        <main className="min-w-0 flex flex-col gap-20 md:gap-24">
+        <main className="sale-main min-w-0 flex flex-col gap-20 md:gap-24">
+          <ArtistStatement />
+
           <WorkChapters />
 
-          <DailyThemes />
 
           <section id="route" className="scroll-mt-4">
             <SectionHead title="the route" zone="interface" />
-            <p className="font-sans text-[16px] text-muted leading-relaxed max-w-[62ch] mb-8">
-              Season 3 is a route through six zones of five days: out of a city
-              read as a system, through streets, suburbs and villages, across wild
-              land, to land that has not formed yet. Each day goes to one bid. The highest bid holds day 1, the
-              next holds day 2, and so on down the route. Hold a day when bidding
-              closes and it is yours.
-            </p>
+            <div className="flex flex-col gap-4 font-sans text-[16px] text-muted leading-relaxed max-w-[64ch] mb-8">
+              <p>
+                Thirty days through six zones, from a city read as a system to land
+                that has not formed yet. In every zone <Kirill /> tells the home through
+                five things, one a day: a figure, a place, an event, an object and a
+                feeling. Read a row to walk a zone. Read a column to watch one thing
+                change: the creator of the interface becomes an architect, a knight, a
+                lamb, an angel, and a soul.
+              </p>
+              <p>
+                Each day goes to one bid. The highest bid holds day 1, the next holds
+                day 2, and so on down the route. Hold a day when bidding closes and it
+                is yours. The market sets its mood, and a signal can add one more voice.
+              </p>
+            </div>
             <RouteBoard
               bids={showBoardData ? s.allBids : []}
               won={showBoardData ? s.wonBids : []}
@@ -1284,6 +1397,7 @@ export default function AuctionPage() {
               signalFor={markerSignal}
               beamRank={beamRank}
               over={showBoardData && routeOver}
+              enableEns={!demo}
             />
 
           </section>

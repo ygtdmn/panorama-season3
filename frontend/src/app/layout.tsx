@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Hanken_Grotesk, Jacquard_24, JetBrains_Mono } from "next/font/google";
+import { Hanken_Grotesk, IBM_Plex_Mono, Jacquard_24, JetBrains_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { themeInitScript } from "@/lib/themeScript";
+import { railMaxInitScript } from "@/lib/railMax";
 import { AUCTION_SITE_URL, OG_IMAGE_URL } from "@/lib/constants";
 
 // Two layers of type. Panorama's own: Hanken Grotesk for text and JetBrains Mono for labels,
@@ -21,11 +22,28 @@ const jetbrainsMono = JetBrains_Mono({
 	variable: "--font-jetbrains-mono",
 });
 
+// The bid console's labels and figures (globals.css re-points --font-mono inside .sale-console).
+const plexMono = IBM_Plex_Mono({
+	subsets: ["latin"],
+	weight: ["400", "500", "600"],
+	display: "swap",
+	variable: "--font-plex-mono",
+});
+
 const jacquard = Jacquard_24({
 	subsets: ["latin"],
 	weight: "400",
 	display: "swap",
 	variable: "--font-jacquard",
+});
+
+// A book serif for Pale Kirill's statement only, so it reads as printed wall text.
+const newsreader = Newsreader({
+	subsets: ["latin"],
+	style: ["normal", "italic"],
+	axes: ["opsz"],
+	display: "swap",
+	variable: "--font-newsreader",
 });
 
 const TITLE = "Panorama Season 3: Nothing Remains the Same";
@@ -63,9 +81,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
 	return (
-		<html lang="en" className={`${hanken.variable} ${jetbrainsMono.variable} ${jacquard.variable} dark h-full`} suppressHydrationWarning>
+		<html lang="en" className={`${hanken.variable} ${jetbrainsMono.variable} ${plexMono.variable} ${jacquard.variable} ${newsreader.variable} dark h-full`} suppressHydrationWarning>
 			<body className="antialiased h-full font-sans bg-background text-foreground">
-				<script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+				<script dangerouslySetInnerHTML={{ __html: themeInitScript + railMaxInitScript }} />
 				<Providers>{children}</Providers>
 			</body>
 		</html>

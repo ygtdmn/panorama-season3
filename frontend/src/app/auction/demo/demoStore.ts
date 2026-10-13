@@ -146,7 +146,7 @@ function pushSeedBid(bidder: string, amount: bigint) {
 
 const DEMO_LAST_TOKEN_ID = 181 + 30 - 1;
 
-const SIGNAL_TOO_LONG = `A signal holds at most ${MAX_SIGNAL_BYTES} bytes. Shorten it and send again.`;
+const SIGNAL_TOO_LONG = `A signal holds at most ${MAX_SIGNAL_BYTES} characters. Shorten it and send again.`;
 
 /** Mirrors the controller's `_checkNew`: the error sentence, or null when the signal may be written. */
 function checkNew(existing: string | undefined, signal: string): string | null {

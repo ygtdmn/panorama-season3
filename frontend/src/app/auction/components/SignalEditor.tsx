@@ -99,7 +99,7 @@ export function SignalEditor({
 					aria-live="polite"
 					className={`font-mono text-micro tabular-nums ${m.over ? "text-signal" : "text-faint"}`}
 				>
-					{m.bytes} / {m.max} bytes
+					{m.bytes} / {m.max} characters
 				</span>
 			</div>
 			<textarea
@@ -118,7 +118,7 @@ export function SignalEditor({
 			</p>
 			{m.over && (
 				<p className="font-mono text-micro uppercase tracking-[0.12em] text-signal" role="alert">
-					Over the limit by {m.bytes - m.max} bytes. Shorten it to save.
+					Over the limit by {m.bytes - m.max} characters. Shorten it to save.
 				</p>
 			)}
 			<div className="flex flex-wrap items-center gap-2">

@@ -193,7 +193,7 @@ describe("demo signals mirror PanoramaSeason3SignalController (write-once, add l
 
 		demoStore.placeBid(you(), DEMO_RESERVE, "é".repeat(140) + "x");
 		const snap = demoStore.getSnapshot();
-		expect(snap.actionError).toBe("A signal holds at most 280 bytes. Shorten it and send again.");
+		expect(snap.actionError).toBe("A signal holds at most 280 characters. Shorten it and send again.");
 		expect(snap.bids).toHaveLength(1); // the rejected bid was never placed
 	});
 
@@ -207,7 +207,7 @@ describe("demo signals mirror PanoramaSeason3SignalController (write-once, add l
 		demoStore.setBidSignal(you(), id, "");
 		expect(demoStore.getSnapshot().actionError).toBe("Write something first.");
 		demoStore.setBidSignal(you(), id, "a".repeat(281));
-		expect(demoStore.getSnapshot().actionError).toContain("at most 280 bytes");
+		expect(demoStore.getSnapshot().actionError).toContain("at most 280 characters");
 		demoStore.setBidSignal(you(), id, "keep one window lit");
 		expect(demoStore.getSnapshot().bidSignals[id]).toBe("keep one window lit");
 		demoStore.setBidSignal(you(), id, "a second thought");

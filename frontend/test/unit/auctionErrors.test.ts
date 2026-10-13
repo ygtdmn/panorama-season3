@@ -75,7 +75,7 @@ describe("describeAuctionError", () => {
 
 	it("decodes the signal controller's errors, including through placeBid", () => {
 		expect(describeAuctionError(controllerError("SignalTooLong", [280n], "placeBid"))).toBe(
-			"A signal holds at most 280 bytes. Shorten it and send again.",
+			"A signal holds at most 280 characters. Shorten it and send again.",
 		);
 		expect(describeAuctionError(controllerError("SignalAlreadySet"))).toBe(
 			"This already has a signal. Signals can't be changed.",
