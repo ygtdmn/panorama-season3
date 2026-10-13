@@ -42,7 +42,7 @@ test.describe("bidding", () => {
 	test("places a bid at the exact advertised minimum", async ({ page }) => {
 		await installWallet(page, BIDDER);
 		await page.goto("/");
-		await expect(page.getByText("Place a bid")).toBeVisible();
+		await expect(page.getByRole("region", { name: "Place a bid" })).toBeVisible();
 
 		await connectWallet(page);
 
@@ -114,7 +114,7 @@ test.describe("bidding", () => {
 
 		await installWallet(page, BIDDER);
 		await page.goto("/");
-		await expect(page.getByText("Place a bid")).toBeVisible();
+		await expect(page.getByRole("region", { name: "Place a bid" })).toBeVisible();
 
 		await warpTo(end - 120);
 		await placeBidRaw(S.auction, bot(50), eth(0.25));
@@ -497,7 +497,7 @@ test.describe("mobile", () => {
 
 		// The hero primer is first, but the bid form must come before the long details
 		// essay so nobody has to scroll past an essay to bid in the final minutes.
-		const bidBox = await page.getByText("Place a bid").boundingBox();
+		const bidBox = await page.getByRole("region", { name: "Place a bid" }).boundingBox();
 		const detailsBox = await page.getByRole("heading", { name: "The sale" }).boundingBox();
 		expect(bidBox && detailsBox && bidBox.y < detailsBox.y).toBe(true);
 

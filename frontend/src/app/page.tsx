@@ -703,8 +703,8 @@ export default function AuctionPage() {
 
       <TransactionStatus actions={actions} />
 
-      {/* Bid: amount, then the signal, then where it lands */}
-      <div className={PANEL}>
+      {/* Bid: amount (with the day it would take), then the signal */}
+      <section aria-label="Place a bid" className={PANEL}>
         {statusNote && !biddable ? (
           <p className="font-sans text-sm text-muted leading-relaxed">
             {statusNote}
@@ -950,7 +950,7 @@ export default function AuctionPage() {
             )}
           </div>
         )}
-      </div>
+      </section>
 
       {/* Your bids */}
       {isConnected && s.yourBids.length > 0 && (
