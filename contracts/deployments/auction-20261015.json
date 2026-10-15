@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-10-15T00:46:36Z",
+  "chainId": 1,
+  "block": 26194421,
+  "gitCommit": "822c9bec60723f01afc7d1ecfb8995766df5b7dd",
+  "gitDirty": false,
+  "auction": {
+    "address": "0x1c23F9Aa8D45828be69FF107E9c4e650b7a1CCd7",
+    "runtimeCodehash": "0x7a350e54721b16e764b4e96a48ed9dc518f75849c638ff08789ca6519d6a94b1",
+    "owner": "0x28996f7DECe7E058EBfC56dFa9371825fBfa515A",
+    "nft": "0x435BD9CF72C278c9bAD9655732a6724469c6D9Ff",
+    "payoutA": "0x077be47506ABa13F54b20850fd47d1Cea69d84A5",
+    "payoutB": "0x2707eaB409E0709b7CE71Bf27CD8f85CbF78E7f4",
+    "reservePriceWei": "100000000000000000",
+    "minIncrementBps": 500,
+    "startTime": 1792429200,
+    "endTime": 1792515600,
+    "absoluteEndTime": 1792602000,
+    "phase": 0,
+    "paused": false,
+    "firstTokenId": 181,
+    "lastTokenId": 210,
+    "maxUnits": 30,
+    "maxBidsPerWallet": 2,
+    "bidTickWei": "1000000000000000",
+    "signalController": "0x76531FEAf5bC0BC2ffB7726ad97f8a640f6fb6F4"
+  },
+  "signalController": {
+    "address": "0x76531FEAf5bC0BC2ffB7726ad97f8a640f6fb6F4",
+    "runtimeCodehash": "0x267312e415656669e88861b36b7d0f740dd3b8d497bb7de0e440b3215a2d9ad3",
+    "owner": "0x28996f7DECe7E058EBfC56dFa9371825fBfa515A",
+    "auction": "0x1c23F9Aa8D45828be69FF107E9c4e650b7a1CCd7",
+    "auctionMatches": true,
+    "nft": "0x435BD9CF72C278c9bAD9655732a6724469c6D9Ff",
+    "maxSignalBytes": 280,
+    "firstTokenId": 181,
+    "lastTokenId": 210
+  },
+  "nft": {
+    "address": "0x435BD9CF72C278c9bAD9655732a6724469c6D9Ff",
+    "owner": "0x28996f7DECe7E058EBfC56dFa9371825fBfa515A",
+    "totalMinted": 180,
+    "mintCap": 180,
+    "auctionAuthorized": false
+  },
+  "mintController": {
+    "address": "0x9f76C13820098E01d85A3273387c21623B77e7Aa",
+    "owner": "0x28996f7DECe7E058EBfC56dFa9371825fBfa515A",
+    "seasonCount": 2,
+    "season1Cap": 90,
+    "season2Cap": 90,
+    "season3Cap": 0
+  }
+}
