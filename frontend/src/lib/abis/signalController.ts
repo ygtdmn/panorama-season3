@@ -3,7 +3,8 @@ import { parseAbi } from "viem";
 // PanoramaSeason3SignalController: stores every Season 3 signal. Signals are WRITE-ONCE and can be
 // added later with no deadline. A bid's signal comes with placeBid (the auction forwards it) or
 // later through setBidSignal, by the live bid's bidder, only while the bid has none. A day's holder
-// can add a token signal through setTokenSignal, only while the token has none. Nothing is ever
+// (or a delegate.xyz v2 or v1 delegate of the holder) can add a token signal through setTokenSignal, only
+// while the token has none. Nothing is ever
 // changed or cleared. A day's signal = the winning bid's signal if non-empty, else the token's.
 export const signalControllerAbi = parseAbi([
 	// config

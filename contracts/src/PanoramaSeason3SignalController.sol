@@ -12,6 +12,27 @@ interface IPanoramaSeason3AuctionBids {
     function bids(uint32 bidId) external view returns (address bidder, uint96 amount);
 }
 
+/// @dev delegate.xyz v1 (DelegationRegistry), still used by many collectors.
+interface IDelegationRegistryV1 {
+    function checkDelegateForToken(
+        address delegate,
+        address vault,
+        address contract_,
+        uint256 tokenId
+    ) external view returns (bool);
+}
+
+/// @dev delegate.xyz v2 (https://docs.delegate.xyz), checked first.
+interface IDelegateRegistry {
+    function checkDelegateForERC721(
+        address to,
+        address from,
+        address contract_,
+        uint256 tokenId,
+        bytes32 rights
+    ) external view returns (bool);
+}
+
 /// @title PanoramaSeason3SignalController
 /// @author Yigit Duman (@yigitduman)
 /// @notice Holds the signals of Panorama Season 3, "Nothing Remains the Same" (tokens #181-#210):
@@ -22,7 +43,10 @@ interface IPanoramaSeason3AuctionBids {
 ///         Signals are write-once: they can be added later but never changed or removed.
 ///         - A bid carries one from the start (the auction forwards it, `recordBidSignal`), or its
 ///           bidder adds one later while the bid is live (`setBidSignal`).
-///         - Once a day's token is minted, its holder can add one (`setTokenSignal`).
+///         - Once a day's token is minted, its holder can add one (`setTokenSignal`), or a wallet
+///           the holder delegated to on delegate.xyz (the whole wallet, the Panorama contract or
+///           that token; v2 with full rights, or v1), so a collector can sign from a hot wallet
+///           while the token stays in the vault.
 ///         A day's signal is the winning bid's signal; if that bid carried none, it is the signal
 ///         the token's holder adds. Either way, once a day has a signal it stays. There is no
 ///         deadline: a signal can still be added after its day is revealed.
@@ -35,6 +59,10 @@ contract PanoramaSeason3SignalController is IPanoramaSeason3SignalController, Ow
     uint256 public constant LAST_TOKEN_ID = 210;
     /// @dev Longest signal, in bytes (UTF-8, so fewer characters for non-ASCII text).
     uint256 public constant MAX_SIGNAL_BYTES = 280;
+    /// @dev delegate.xyz DelegateRegistry v2, the same address on mainnet and Sepolia.
+    address public constant DELEGATE_REGISTRY = 0x00000000000000447e69651d841bD8D104Bed493;
+    /// @dev delegate.xyz DelegationRegistry v1, the same address on mainnet and Sepolia.
+    address public constant DELEGATE_REGISTRY_V1 = 0x00000000000076A84feF008CDAbe6409d2FE638B;
 
     /*//////////////////////////////////////////////////////////////
                                  STATE
@@ -115,14 +143,16 @@ contract PanoramaSeason3SignalController is IPanoramaSeason3SignalController, Ow
         emit BidSignalSet(bidId, msg.sender, signal);
     }
 
-    /// @notice Adds a signal to a Season 3 day you hold that has no holder signal yet. It cannot be
-    ///         changed. A day whose winning bid already carried a signal keeps that one.
+    /// @notice Adds a signal to a Season 3 day you hold, or hold through a delegate.xyz delegation,
+    ///         that has no holder signal yet. It cannot be changed. A day whose winning bid already
+    ///         carried a signal keeps that one.
     function setTokenSignal(uint256 tokenId, string calldata signal) external {
         if (tokenId < FIRST_TOKEN_ID || tokenId > LAST_TOKEN_ID) revert TokenOutOfRange();
-        if (nft.ownerOf(tokenId) != msg.sender) revert NotTokenHolder();
+        address holder = nft.ownerOf(tokenId);
+        if (holder != msg.sender && !_isDelegate(msg.sender, holder, tokenId)) revert NotTokenHolder();
         _checkNew(tokenSignal[tokenId], signal);
         tokenSignal[tokenId] = signal;
-        emit TokenSignalSet(tokenId, msg.sender, signal);
+        emit TokenSignalSet(tokenId, holder, signal);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -135,6 +165,30 @@ contract PanoramaSeason3SignalController is IPanoramaSeason3SignalController, Ow
         if (tokenId < FIRST_TOKEN_ID || tokenId > LAST_TOKEN_ID) revert TokenOutOfRange();
         string memory fromBid = bidSignal[winningBidId];
         return bytes(fromBid).length != 0 ? fromBid : tokenSignal[tokenId];
+    }
+
+    /// @dev True when `holder` delegated to `account` on delegate.xyz for this token: in v2 the whole
+    ///      wallet, the Panorama contract or the token, with full rights (rights = 0); in v1 the
+    ///      same three kinds (v1 has no rights). A registry with no code, or a call that fails,
+    ///      reads as no delegation, so this never reverts.
+    function _isDelegate(address account, address holder, uint256 tokenId) private view returns (bool) {
+        if (account == address(0)) return false;
+        return _registryAnswersYes(
+            DELEGATE_REGISTRY,
+            abi.encodeCall(
+            IDelegateRegistry.checkDelegateForERC721, (account, holder, address(nft), tokenId, bytes32(0))
+        )
+        )
+            || _registryAnswersYes(
+            DELEGATE_REGISTRY_V1,
+            abi.encodeCall(IDelegationRegistryV1.checkDelegateForToken, (account, holder, address(nft), tokenId))
+        );
+    }
+
+    function _registryAnswersYes(address registry, bytes memory call) private view returns (bool) {
+        if (registry.code.length == 0) return false;
+        (bool ok, bytes memory data) = registry.staticcall(call);
+        return ok && data.length == 32 && abi.decode(data, (uint256)) == 1;
     }
 
     /// @dev Write-once: non-empty, within the limit, and only into an empty slot.

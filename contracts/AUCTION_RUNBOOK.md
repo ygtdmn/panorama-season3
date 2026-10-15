@@ -14,7 +14,8 @@ were not re-audited. The 58/42 proceeds split is unchanged.
 
 Signals are optional. A bid can carry one in the same transaction (`placeBid(signal)`,
 forwarded to the controller), or its bidder adds one later with `setBidSignal` while the bid
-is live. After the sale, a day's holder can add one with `setTokenSignal`. Every signal is
+is live. After the sale, a day's holder (or the holder's delegate.xyz v2 or v1 delegate) can add one with
+`setTokenSignal`. Every signal is
 write-once (never changed or cleared) and there is no deadline: a signal can arrive after its
 day is revealed. A day's signal is the winning bid's, or its holder's if that bid had none.
 The artists may use or ignore any signal.
@@ -359,7 +360,9 @@ Bid with `cast send $AUCTION 'placeBid(string)' '' --value ...` (or a signal str
 `''`; amounts on the 0.001 ETH tick). Add a signal later with
 `cast send $SIGNALS 'setBidSignal(uint32,string)' $BID_ID '...'` from the bidder, and after
 settlement with `cast send $SIGNALS 'setTokenSignal(uint256,string)' $TOKEN_ID '...'` from the
-holder; check that a second write to the same bid or token reverts `SignalAlreadySet`. Also
+holder, and from a wallet the holder delegated to with `delegateAll` on the registry
+(v2 `0x00000000000000447e69651d841bD8D104Bed493`, or `delegateForAll` on v1
+`0x00000000000076A84feF008CDAbe6409d2FE638B`; both also on Sepolia); check that a second write to the same bid or token reverts `SignalAlreadySet`. Also
 rehearse the cancel path and an
 `emergencyRefund` at least once before launch.
 

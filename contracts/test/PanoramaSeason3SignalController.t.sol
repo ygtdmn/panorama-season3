@@ -8,6 +8,86 @@ import { PanoramaMintController } from "../src/PanoramaMintController.sol";
 import { PanoramaSeason3Auction } from "../src/PanoramaSeason3Auction.sol";
 import { PanoramaSeason3SignalController } from "../src/PanoramaSeason3SignalController.sol";
 
+/// @dev The delegate.xyz v2 semantics `setTokenSignal` relies on, for full-rights delegations:
+///      a wallet, contract or single-token delegation from `from` to `to`.
+contract MockDelegateRegistry {
+    mapping(bytes32 => bool) internal _delegated;
+
+    function delegateAll(address to, bytes32 rights, bool enable) external {
+        _delegated[keccak256(abi.encode(1, msg.sender, to, address(0), uint256(0), rights))] = enable;
+    }
+
+    function delegateContract(address to, address contract_, bytes32 rights, bool enable) external {
+        _delegated[keccak256(abi.encode(2, msg.sender, to, contract_, uint256(0), rights))] = enable;
+    }
+
+    function delegateERC721(address to, address contract_, uint256 tokenId, bytes32 rights, bool enable) external {
+        _delegated[keccak256(abi.encode(3, msg.sender, to, contract_, tokenId, rights))] = enable;
+    }
+
+    function checkDelegateForERC721(
+        address to,
+        address from,
+        address contract_,
+        uint256 tokenId,
+        bytes32 rights
+    ) external view returns (bool) {
+        return _has(to, from, contract_, tokenId, bytes32(0))
+            || (rights != 0 && _has(to, from, contract_, tokenId, rights));
+    }
+
+    function _has(
+        address to,
+        address from,
+        address contract_,
+        uint256 tokenId,
+        bytes32 rights
+    ) internal view returns (bool) {
+        return _delegated[keccak256(abi.encode(1, from, to, address(0), uint256(0), rights))]
+            || _delegated[keccak256(abi.encode(2, from, to, contract_, uint256(0), rights))]
+            || _delegated[keccak256(abi.encode(3, from, to, contract_, tokenId, rights))];
+    }
+}
+
+/// @dev delegate.xyz v1 semantics: checkDelegateForToken falls back to contract, then wallet.
+contract MockDelegationRegistryV1 {
+    mapping(bytes32 => bool) internal _delegated;
+
+    function delegateForAll(address delegate, bool value) external {
+        _delegated[keccak256(abi.encode(1, msg.sender, delegate, address(0), uint256(0)))] = value;
+    }
+
+    function delegateForContract(address delegate, address contract_, bool value) external {
+        _delegated[keccak256(abi.encode(2, msg.sender, delegate, contract_, uint256(0)))] = value;
+    }
+
+    function delegateForToken(address delegate, address contract_, uint256 tokenId, bool value) external {
+        _delegated[keccak256(abi.encode(3, msg.sender, delegate, contract_, tokenId))] = value;
+    }
+
+    function checkDelegateForToken(
+        address delegate,
+        address vault,
+        address contract_,
+        uint256 tokenId
+    ) external view returns (bool) {
+        return _delegated[keccak256(abi.encode(3, vault, delegate, contract_, tokenId))]
+            || _delegated[keccak256(abi.encode(2, vault, delegate, contract_, uint256(0)))]
+            || _delegated[keccak256(abi.encode(1, vault, delegate, address(0), uint256(0)))];
+    }
+}
+
+/// @dev Answers every delegation check with garbage (not a bool), to prove a broken registry
+///      reads as no delegation instead of reverting.
+contract GarbageDelegateRegistry {
+    fallback() external {
+        assembly {
+            mstore(0, 7)
+            return(0, 32)
+        }
+    }
+}
+
 contract PanoramaSeason3SignalControllerTest is Test {
     Panorama nft;
     PanoramaMintController mintController;
@@ -318,6 +398,204 @@ contract PanoramaSeason3SignalControllerTest is Test {
         _expectAlreadySet();
         signals.setTokenSignal(183, "third holder");
         assertEq(signals.tokenSignal(183), "new holder");
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                         DELEGATE.XYZ DELEGATES
+    //////////////////////////////////////////////////////////////*/
+
+    function _mockRegistry() internal returns (MockDelegateRegistry registry) {
+        vm.etch(signals.DELEGATE_REGISTRY(), address(new MockDelegateRegistry()).code);
+        registry = MockDelegateRegistry(signals.DELEGATE_REGISTRY());
+    }
+
+    /// @dev A wallet-wide delegation lets the hot wallet sign; the event names the holder.
+    function test_setTokenSignal_delegateAll() public {
+        _settleThree();
+        MockDelegateRegistry registry = _mockRegistry();
+        address vault = nft.ownerOf(182);
+        address hot = _actor(60);
+
+        vm.prank(hot);
+        vm.expectRevert(PanoramaSeason3SignalController.NotTokenHolder.selector);
+        signals.setTokenSignal(182, "before the delegation");
+
+        vm.prank(vault);
+        registry.delegateAll(hot, bytes32(0), true);
+        vm.prank(hot);
+        vm.expectEmit(address(signals));
+        emit PanoramaSeason3SignalController.TokenSignalSet(182, vault, "from the hot wallet");
+        signals.setTokenSignal(182, "from the hot wallet");
+        assertEq(signals.tokenSignal(182), "from the hot wallet");
+
+        // Write-once holds for the vault too.
+        vm.prank(vault);
+        _expectAlreadySet();
+        signals.setTokenSignal(182, "the vault tries again");
+    }
+
+    function test_setTokenSignal_delegateContractAndToken() public {
+        _settleThree();
+        MockDelegateRegistry registry = _mockRegistry();
+        address vault = _actor(0); // holds #183
+        address hot = _actor(61);
+
+        // A delegation for another contract does not count.
+        vm.prank(vault);
+        registry.delegateContract(hot, address(0xBEEF), bytes32(0), true);
+        vm.prank(hot);
+        vm.expectRevert(PanoramaSeason3SignalController.NotTokenHolder.selector);
+        signals.setTokenSignal(183, "wrong contract");
+
+        vm.prank(vault);
+        registry.delegateContract(hot, address(nft), bytes32(0), true);
+        vm.prank(hot);
+        signals.setTokenSignal(183, "contract delegation");
+        assertEq(signals.tokenSignal(183), "contract delegation");
+
+        // A single-token delegation covers that token only.
+        address vault2 = _actor(1); // holds #182
+        address hot2 = _actor(62);
+        vm.prank(vault2);
+        registry.delegateERC721(hot2, address(nft), 181, bytes32(0), true);
+        vm.prank(hot2);
+        vm.expectRevert(PanoramaSeason3SignalController.NotTokenHolder.selector);
+        signals.setTokenSignal(182, "other token");
+        vm.prank(vault2);
+        registry.delegateERC721(hot2, address(nft), 182, bytes32(0), true);
+        vm.prank(hot2);
+        signals.setTokenSignal(182, "token delegation");
+        assertEq(signals.tokenSignal(182), "token delegation");
+    }
+
+    /// @dev Only full-rights delegations count; a revoked one stops counting; the delegation
+    ///      follows the holder, not the token.
+    function test_setTokenSignal_delegateRightsRevokeAndTransfer() public {
+        _settleThree();
+        MockDelegateRegistry registry = _mockRegistry();
+        address vault = _actor(0); // holds #183
+        address hot = _actor(63);
+
+        vm.prank(vault);
+        registry.delegateAll(hot, bytes32("airdrops"), true);
+        vm.prank(hot);
+        vm.expectRevert(PanoramaSeason3SignalController.NotTokenHolder.selector);
+        signals.setTokenSignal(183, "limited rights");
+
+        vm.prank(vault);
+        registry.delegateAll(hot, bytes32(0), true);
+        vm.prank(vault);
+        registry.delegateAll(hot, bytes32(0), false);
+        vm.prank(hot);
+        vm.expectRevert(PanoramaSeason3SignalController.NotTokenHolder.selector);
+        signals.setTokenSignal(183, "revoked");
+
+        vm.prank(vault);
+        registry.delegateAll(hot, bytes32(0), true);
+        address buyer = _actor(64);
+        vm.prank(vault);
+        nft.transferFrom(vault, buyer, 183);
+        vm.prank(hot);
+        vm.expectRevert(PanoramaSeason3SignalController.NotTokenHolder.selector);
+        signals.setTokenSignal(183, "sold");
+        vm.prank(buyer);
+        signals.setTokenSignal(183, "the buyer");
+        assertEq(signals.tokenSignal(183), "the buyer");
+    }
+
+    function _mockRegistryV1() internal returns (MockDelegationRegistryV1 registry) {
+        vm.etch(signals.DELEGATE_REGISTRY_V1(), address(new MockDelegationRegistryV1()).code);
+        registry = MockDelegationRegistryV1(signals.DELEGATE_REGISTRY_V1());
+    }
+
+    /// @dev delegate.xyz v1: wallet, contract and token delegations all count, without v2.
+    function test_setTokenSignal_delegateV1() public {
+        _settleThree();
+        MockDelegationRegistryV1 v1 = _mockRegistryV1();
+        assertEq(signals.DELEGATE_REGISTRY().code.length, 0);
+
+        // #183 (actor 0): wallet delegation.
+        address hot = _actor(70);
+        vm.prank(hot);
+        vm.expectRevert(PanoramaSeason3SignalController.NotTokenHolder.selector);
+        signals.setTokenSignal(183, "x");
+        vm.prank(_actor(0));
+        v1.delegateForAll(hot, true);
+        vm.prank(hot);
+        vm.expectEmit(address(signals));
+        emit PanoramaSeason3SignalController.TokenSignalSet(183, _actor(0), "v1 wallet");
+        signals.setTokenSignal(183, "v1 wallet");
+
+        // #182 (actor 1): a delegation for another token or contract does not count; this token does.
+        address hot2 = _actor(71);
+        vm.startPrank(_actor(1));
+        v1.delegateForToken(hot2, address(nft), 181, true);
+        v1.delegateForContract(hot2, address(0xBEEF), true);
+        vm.stopPrank();
+        vm.prank(hot2);
+        vm.expectRevert(PanoramaSeason3SignalController.NotTokenHolder.selector);
+        signals.setTokenSignal(182, "x");
+        vm.prank(_actor(1));
+        v1.delegateForToken(hot2, address(nft), 182, true);
+        vm.prank(hot2);
+        signals.setTokenSignal(182, "v1 token");
+
+        // #181 (actor 2): contract delegation; revoked before use, it stops counting.
+        address hot3 = _actor(72);
+        vm.prank(_actor(2));
+        v1.delegateForContract(hot3, address(nft), true);
+        vm.prank(_actor(2));
+        v1.delegateForContract(hot3, address(nft), false);
+        vm.prank(hot3);
+        vm.expectRevert(PanoramaSeason3SignalController.NotTokenHolder.selector);
+        signals.setTokenSignal(181, "revoked");
+        vm.prank(_actor(2));
+        v1.delegateForContract(hot3, address(nft), true);
+        vm.prank(hot3);
+        signals.setTokenSignal(181, "v1 contract");
+        assertEq(signals.tokenSignal(181), "v1 contract");
+    }
+
+    /// @dev A broken v2 registry does not hide a valid v1 delegation, and the other way round.
+    function test_setTokenSignal_oneBrokenRegistryDoesNotBlockTheOther() public {
+        _settleThree();
+        vm.etch(signals.DELEGATE_REGISTRY(), address(new GarbageDelegateRegistry()).code);
+        MockDelegationRegistryV1 v1 = _mockRegistryV1();
+        address hot = _actor(73);
+        vm.prank(_actor(1));
+        v1.delegateForAll(hot, true);
+        vm.prank(hot);
+        signals.setTokenSignal(182, "through v1");
+        assertEq(signals.tokenSignal(182), "through v1");
+
+        vm.etch(signals.DELEGATE_REGISTRY_V1(), address(new GarbageDelegateRegistry()).code);
+        MockDelegateRegistry v2 = _mockRegistry();
+        vm.prank(_actor(0));
+        v2.delegateAll(hot, bytes32(0), true);
+        vm.prank(hot);
+        signals.setTokenSignal(183, "through v2");
+        assertEq(signals.tokenSignal(183), "through v2");
+    }
+
+    /// @dev Without the registry (a local chain) or with a broken one, only the holder can sign.
+    function test_setTokenSignal_noOrBrokenRegistry() public {
+        _settleThree();
+        address hot = _actor(65);
+        assertEq(signals.DELEGATE_REGISTRY().code.length, 0);
+        assertEq(signals.DELEGATE_REGISTRY_V1().code.length, 0);
+        vm.prank(hot);
+        vm.expectRevert(PanoramaSeason3SignalController.NotTokenHolder.selector);
+        signals.setTokenSignal(182, "no registry");
+
+        vm.etch(signals.DELEGATE_REGISTRY(), address(new GarbageDelegateRegistry()).code);
+        vm.etch(signals.DELEGATE_REGISTRY_V1(), address(new GarbageDelegateRegistry()).code);
+        vm.prank(hot);
+        vm.expectRevert(PanoramaSeason3SignalController.NotTokenHolder.selector);
+        signals.setTokenSignal(182, "broken registry");
+
+        vm.prank(_actor(1));
+        signals.setTokenSignal(182, "the holder");
+        assertEq(signals.tokenSignal(182), "the holder");
     }
 
     /*//////////////////////////////////////////////////////////////

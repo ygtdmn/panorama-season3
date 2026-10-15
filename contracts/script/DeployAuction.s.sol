@@ -166,6 +166,15 @@ contract DeployAuction is BaseScript {
             "CONTROLLER_TOKEN_RANGE_MISMATCH"
         );
         require(controller.MAX_SIGNAL_BYTES() == MAX_SIGNAL_BYTES, "MAX_SIGNAL_BYTES_MISMATCH");
+        // Holders' delegate.xyz delegates may add day signals: both registries, at their fixed addresses.
+        require(
+            controller.DELEGATE_REGISTRY() == 0x00000000000000447e69651d841bD8D104Bed493
+                && controller.DELEGATE_REGISTRY_V1() == 0x00000000000076A84feF008CDAbe6409d2FE638B,
+            "DELEGATE_REGISTRY_MISMATCH"
+        );
+        if (controller.DELEGATE_REGISTRY().code.length == 0 || controller.DELEGATE_REGISTRY_V1().code.length == 0) {
+            console2.log("WARNING: a delegate.xyz registry has no code on this chain; only holders can add day signals");
+        }
 
         // Ensure no concurrent collection mutation slipped into the simulated deployment sequence.
         IPanorama nft = IPanorama(config.nft);
