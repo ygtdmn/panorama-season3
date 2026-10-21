@@ -82,19 +82,22 @@ AUCTION_RUNBOOK.md             Deploy, settle and incident procedures
 
 ## Mainnet deployment
 
-Not deployed yet.
+Deployed 2026-10-15 at block 26194409 and settled 2026-10-20 (block 26235193). Manifest: `deployments/auction-20261015.json`.
 
 | | |
 |---|---|
-| Auction | not deployed yet |
-| Signal controller | not deployed yet |
-| Runtime codehash | not deployed yet |
-| Schedule | opens 2026-10-19 17:00 UTC (`1792429200`), runs 24h, extensions add at most 24h (absolute end 2026-10-21 17:00 UTC) |
+| Auction | [`0x1c23F9Aa8D45828be69FF107E9c4e650b7a1CCd7`](https://etherscan.io/address/0x1c23F9Aa8D45828be69FF107E9c4e650b7a1CCd7) |
+| Signal controller | [`0x76531FEAf5bC0BC2ffB7726ad97f8a640f6fb6F4`](https://etherscan.io/address/0x76531FEAf5bC0BC2ffB7726ad97f8a640f6fb6F4) |
+| Runtime codehash | `0x7a350e54721b16e764b4e96a48ed9dc518f75849c638ff08789ca6519d6a94b1` |
+| Schedule | opened 2026-10-19 17:00 UTC (`1792429200`); late bids moved the end to 2026-10-20 17:05:47 UTC (`1792515947`) |
 | Reserve / increment | 0.1 ETH / 5% (500 bps), same as Season 2 |
-| Proceeds | 58% payout A, 42% payout B (`SPLIT_A_BPS`, same as Season 2) |
-| Manifest | create with `scripts/auction-manifest.sh` after deployment |
+| Result | 22 winners, minted #181-#202 highest bid first; the board never filled, so every winner paid the 0.1 ETH reserve (2.2 ETH in all) |
+| Proceeds | 58% payout A (yigitduman.eth), 42% payout B (palekirill.eth) (`SPLIT_A_BPS`, same as Season 2) |
+| Settlement | [`0x0aa783bcdc7baa7e03dd15fed72392b0de25d6c461b287f48ff9c3058342e646`](https://etherscan.io/tx/0x0aa783bcdc7baa7e03dd15fed72392b0de25d6c461b287f48ff9c3058342e646) via `SettleAuctionAtomic` |
 
-Season 3's first tableau publishes 2026-10-20.
+The eight unsold days (#203-#210) were minted outside the auction afterwards and are sold one per reveal (Manifold auction, then an OpenSea listing) by the Panorama ops server.
+
+Season 3's first tableau published on 2026-10-20.
 
 The NFT is the existing Panorama collection at `0x435BD9CF72C278c9bAD9655732a6724469c6D9Ff`. Its mint controller holds seasons 1 and 2 at 90 each, so `totalMinted() == 180` and `mintCap() == 180`: exactly the state this auction requires at deploy and while bidding.
 
