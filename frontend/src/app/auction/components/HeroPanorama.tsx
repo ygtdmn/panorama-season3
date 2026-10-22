@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { CDN_BASE_URL } from "@/lib/constants";
 
 // The season's own strip, travelling through the title screen from Interface to Abstract: the 21
@@ -174,9 +175,12 @@ function useSteerableDrift(
  */
 export function HeroScreen({
 	topRight,
+	primary,
 }: {
 	/** Pinned to the screen's top-right corner (the Enter Panorama button). */
 	topRight?: React.ReactNode;
+	/** The bevelled button that leads the menu: another page when given, else the bid console. */
+	primary?: { label: string; href: string };
 }) {
 	const viewportRef = useRef<HTMLDivElement>(null);
 	const trackRef = useRef<HTMLDivElement>(null);
@@ -241,16 +245,22 @@ export function HeroScreen({
 					</div>
 
 					<nav aria-label="Sections" className="pointer-events-auto self-start flex flex-wrap items-center gap-x-5 gap-y-3">
-						<a
-							href="#sale"
-							onClick={(e) => {
-								e.preventDefault();
-								go("#sale");
-							}}
-							className="game-btn text-[15px] px-7 py-2.5"
-						>
-							bid
-						</a>
+						{primary ? (
+							<Link href={primary.href} className="game-btn text-[15px] px-7 py-2.5">
+								{primary.label}
+							</Link>
+						) : (
+							<a
+								href="#sale"
+								onClick={(e) => {
+									e.preventDefault();
+									go("#sale");
+								}}
+								className="game-btn text-[15px] px-7 py-2.5"
+							>
+								bid
+							</a>
+						)}
 						{LINKS.map((m) => (
 							<a
 								key={m.href}

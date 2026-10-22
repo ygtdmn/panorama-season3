@@ -3,7 +3,9 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useAddressLabel } from "@/app/hooks/useAddressLabel";
 import { getBlockExplorerAddressUrl } from "@/lib/constants";
-import { LuMail } from "react-icons/lu";
+import { LuArrowUpRight, LuMail } from "react-icons/lu";
+import type { DayAuction } from "@/lib/dayAuctions";
+import { fmtLeft, openDayView } from "./OpenDays";
 import { DAYS_PER_ZONE, themeForToken, zoneForToken } from "@/lib/season3Zones";
 import type {
 	AuctionBidRow,
@@ -56,11 +58,42 @@ function EmptySlotRow({
 	rank,
 	over,
 	firstTokenId,
+	openDay,
+	now,
 }: {
 	rank: number;
 	over: boolean;
 	firstTokenId: number;
+	/** The day's own auction on Manifold, once the season's auction left it open. */
+	openDay?: DayAuction;
+	now: number;
 }) {
+	if (over && openDay) {
+		const view = openDayView(openDay, now);
+		return (
+			<li className="relative flex items-center h-10 3xl:h-11 4xl:h-12 pl-3 pr-3 4xl:px-5">
+				<ZoneBar rank={rank} firstTokenId={firstTokenId} />
+				<SlotCell rank={rank} firstTokenId={firstTokenId} />
+				<a
+					href={openDay.url}
+					target="_blank"
+					rel="noreferrer"
+					className="relative flex-1 min-w-0 flex items-center justify-between gap-3 font-mono text-micro uppercase tracking-[0.1em] text-sky-pink hover:text-foreground transition-colors"
+				>
+					<span className="inline-flex items-center gap-1 truncate">
+						{view.left !== null ? fmtLeft(view.left) : view.biddable ? "open for bids" : view.status}
+						<LuArrowUpRight size={11} aria-hidden className="shrink-0" />
+					</span>
+					{view.status !== "open" && (
+						<span className="font-serif normal-case tracking-normal tabular-nums text-foreground shrink-0">
+							{view.price}
+							<span className="font-mono text-micro uppercase tracking-[0.1em] text-faint ml-1">ETH</span>
+						</span>
+					)}
+				</a>
+			</li>
+		);
+	}
 	return (
 		<li className="relative flex items-center h-10 3xl:h-11 4xl:h-12 pl-3 pr-3 4xl:px-5">
 			<ZoneBar rank={rank} firstTokenId={firstTokenId} />
@@ -204,6 +237,8 @@ export function Standings({
 	wonIntegrityIssue,
 	onRetryWon,
 	signalFor,
+	openDays,
+	now = 0,
 }: {
 	bids: AuctionBidRow[]; // live bids, sorted high -> low
 	won?: WonRow[]; // minted winners, sorted by tokenId (mint order = bid order)
@@ -222,6 +257,9 @@ export function Standings({
 	onRetryWon: () => void;
 	/** The signal to mark on a row: a live bid's own, or a minted day's effective signal. */
 	signalFor: (bidId: number, tokenId?: number) => string | undefined;
+	/** Days the season's auction left open, on their own Manifold auctions, by token. */
+	openDays?: Map<number, DayAuction>;
+	now?: number;
 }) {
 	const [infoOpen, setInfoOpen] = useState(false);
 	const youLc = you?.toLowerCase();
@@ -335,7 +373,7 @@ export function Standings({
 										(_, i) => won.length + bids.length + i + 1,
 									).map((slot) => ({
 										rank: slot as number | null,
-										node: <EmptySlotRow rank={slot} over={over} firstTokenId={firstTokenId} />,
+										node: <EmptySlotRow rank={slot} over={over} firstTokenId={firstTokenId} openDay={openDays?.get(firstTokenId + slot - 1)} now={now} />,
 										key: `slot-${slot}`,
 									}))
 								: []),

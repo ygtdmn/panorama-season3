@@ -24,6 +24,9 @@ import { landingRank, RouteBoard } from "@/app/auction/components/RouteBoard";
 import { Kirill, SeasonDetails, SectionHead } from "@/app/auction/components/SeasonDetails";
 import { WorkChapters } from "@/app/auction/components/WorkChapters";
 import { ArtistStatement } from "@/app/auction/components/ArtistStatement";
+import { OpenDaysPanel } from "@/app/auction/components/OpenDays";
+import { auctionsByToken, useDayAuctions } from "@/app/hooks/useDayAuctions";
+import { dayAuctionStatus, isBiddable } from "@/lib/dayAuctions";
 import {
   pendingActionLabel,
   TransactionStatus,
@@ -256,6 +259,21 @@ export default function AuctionPage() {
   // The contract stays "active" from deploy until finalize; only startTime→endTime
   // is live. Everything status-shaped (label, dot) reads this, not the raw phase.
   const phaseView = displayPhase(s.phase, now, s.startTime, s.endTime);
+  // After the sale: the page speaks to visitors and holders. The days it left open are each on
+  // their own Manifold auction (mainnet only), read through /api/day-auctions.
+  const afterSale = s.phase === "settled";
+  const dayAuctions = useDayAuctions();
+  const dayNow = useChainNow(dayAuctions.anchor);
+  const openDays = useMemo(
+    () => (afterSale ? auctionsByToken(dayAuctions.data) : undefined),
+    [afterSale, dayAuctions.data],
+  );
+  const openAuctions = afterSale ? dayAuctions.data?.auctions ?? [] : [];
+  // A day sold on Manifold counts as sold; the rest are still open for bids.
+  const manifoldSold = openAuctions.filter((a) => !isBiddable(dayAuctionStatus(a, dayNow)));
+  const openCount = openAuctions.length - manifoldSold.length;
+  const soldCount = s.winnerCount + manifoldSold.length;
+  const manifoldSoldTokens = new Set(manifoldSold.map((a) => a.tokenId));
   // A late bid extends endTime in the block it lands. Until a fresh snapshot confirms the end
   // really stood, "Closed" would be a guess made from data that may predate an extension, which
   // is exactly what sends people to the reload button. Say "Closing" and keep resyncing instead.
@@ -517,7 +535,7 @@ export default function AuctionPage() {
     <div className="flex items-end gap-[2px] h-3.5" aria-hidden>
       {Array.from({ length: s.maxUnits || 30 }, (_, i) => {
         const zone = SEASON_3_ZONES[Math.min(SEASON_3_ZONES.length - 1, Math.floor(i / 5))];
-        const held = i < slotsFilled;
+        const held = i < slotsFilled || manifoldSoldTokens.has(s.firstTokenId + i);
         const beam = beamRank === i + 1;
         return (
           <span
@@ -614,6 +632,11 @@ export default function AuctionPage() {
       {/* Status: phase, clock, and the thirty days filling up */}
       <div className={`${PANEL} flex flex-col gap-5`}>
         <div className="flex items-start justify-between gap-3">
+          {afterSale ? (
+            <span className="font-sans font-semibold text-[32px] whitespace-nowrap tracking-[-0.02em] text-foreground leading-none pt-1">
+              {soldCount} of {s.maxUnits} sold
+            </span>
+          ) : (
           <div className="flex flex-col gap-3">
             <span className="inline-flex items-center gap-2">
               <LiveDot phase={phaseView} />
@@ -642,6 +665,7 @@ export default function AuctionPage() {
               )
             )}
           </div>
+          )}
           {!demo && (
             <div className="shrink-0">
               <WalletPill />
@@ -651,6 +675,14 @@ export default function AuctionPage() {
         <div className="flex flex-col gap-2.5">
           {heldTicks}
           <div className="flex items-baseline justify-between gap-3">
+            {afterSale && openCount > 0 ? (
+              <Link
+                href="/auctions"
+                className="font-mono text-micro uppercase tracking-[0.2em] text-sky-pink hover:text-foreground transition-colors"
+              >
+                {openCount} open for bids →
+              </Link>
+            ) : (
             <span
               tabIndex={0}
               data-tooltip={
@@ -667,6 +699,7 @@ export default function AuctionPage() {
               </span>
               <Label>{s.phase === "settled" ? "Days sold" : "Days with a bid"}</Label>
             </span>
+            )}
             <span
               tabIndex={0}
               data-tooltip={
@@ -704,6 +737,9 @@ export default function AuctionPage() {
       <TransactionStatus actions={actions} />
 
       {/* Bid: amount (with the day it would take), then the signal */}
+      {afterSale ? (
+        <OpenDaysPanel auctions={openAuctions} now={dayNow} />
+      ) : (
       <section aria-label="Place a bid" className={PANEL}>
         {statusNote && !biddable ? (
           <p className="font-sans text-sm text-muted leading-relaxed">
@@ -951,6 +987,7 @@ export default function AuctionPage() {
           </div>
         )}
       </section>
+      )}
 
       {/* Your bids */}
       {isConnected && s.yourBids.length > 0 && (
@@ -1294,6 +1331,8 @@ export default function AuctionPage() {
             wonIntegrityIssue={s.wonIntegrityIssue}
             onRetryWon={s.refetchWon}
             signalFor={markerSignal}
+            openDays={openDays}
+            now={dayNow}
           />
         </div>
       )}
@@ -1321,6 +1360,7 @@ export default function AuctionPage() {
       <section className="px-3 md:px-8 xl:px-12 pt-3 md:pt-5">
         <div className="mx-auto w-full max-w-[1480px] h-[calc(100svh-2.5rem)] min-h-[540px] max-h-[880px] border border-[var(--panel-edge)] shadow-[0_0_60px_rgba(43,43,255,0.18)]">
           <HeroScreen
+            primary={afterSale && openCount > 0 ? { label: "bid", href: "/auctions" } : undefined}
             topRight={
               <a
                 href={SITE_URL}
@@ -1342,7 +1382,7 @@ export default function AuctionPage() {
       >
         <aside className="sale-console order-first lg:order-last lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto overlay-scroll-content">
           <div className="game-titlebar px-3 py-1.5 text-[14px] flex items-center justify-between gap-3">
-            <span>bid</span>
+            <span>{afterSale ? "the days" : "bid"}</span>
             <button
               type="button"
               onClick={() => updateRailMax(!railMax)}
@@ -1365,6 +1405,27 @@ export default function AuctionPage() {
         </aside>
 
         <main className="sale-main min-w-0 flex flex-col gap-20 md:gap-24">
+          {afterSale && (
+            <section aria-label="About Panorama" className="flex flex-col gap-4 max-w-[60ch]">
+              <p className="font-sans text-[clamp(1.05rem,1rem+0.3vw,1.25rem)] leading-relaxed text-foreground">
+                Panorama is one artwork that grows by a tableau a day, each joined to the one before.
+                The price of $PANO over the day sets its mood. Season 3 is thirty days by Yigit Duman
+                and Pale Kirill, revealed one a day from October 20.
+              </p>
+              <p className="font-mono text-micro uppercase tracking-[0.2em] text-muted">
+                {soldCount} of {s.maxUnits} sold
+                {openCount > 0 && (
+                  <>
+                    {" / "}
+                    <Link href="/auctions" className="text-sky-pink hover:text-foreground transition-colors">
+                      {openCount} open for bids →
+                    </Link>
+                  </>
+                )}
+              </p>
+            </section>
+          )}
+
           <ArtistStatement />
 
           <WorkChapters />
@@ -1381,11 +1442,19 @@ export default function AuctionPage() {
                 change: the creator of the interface becomes an architect, a knight, a
                 lamb, an angel, and a soul.
               </p>
-              <p>
-                Each day goes to one bid. The highest bid holds day 1, the next holds
-                day 2, and so on down the route. Hold a day when bidding closes and it
-                is yours. The market sets its mood, and a signal can add one more voice.
-              </p>
+              {afterSale ? (
+                <p>
+                  {soldCount} of the {s.maxUnits} days are sold.
+                  {openCount > 0 && ` The other ${openCount} are open for bids: pick one below to bid on it.`}{" "}
+                  The market sets each day&apos;s mood, and its holder&apos;s signal can add one more voice.
+                </p>
+              ) : (
+                <p>
+                  Each day goes to one bid. The highest bid holds day 1, the next holds
+                  day 2, and so on down the route. Hold a day when bidding closes and it
+                  is yours. The market sets its mood, and a signal can add one more voice.
+                </p>
+              )}
             </div>
             <RouteBoard
               bids={showBoardData ? s.allBids : []}
@@ -1398,6 +1467,8 @@ export default function AuctionPage() {
               beamRank={beamRank}
               over={showBoardData && routeOver}
               enableEns={!demo}
+              openDays={openDays}
+              now={dayNow}
             />
 
           </section>
@@ -1409,6 +1480,9 @@ export default function AuctionPage() {
             hardEndLabel={
               s.absoluteEndTime > 0 ? fmtDateUTC(s.absoluteEndTime) : undefined
             }
+            settled={afterSale}
+            soldCount={soldCount}
+            openCount={openCount}
           />
         </main>
       </div>

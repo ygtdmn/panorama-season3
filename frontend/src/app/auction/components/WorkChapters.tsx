@@ -26,7 +26,7 @@ const CHAPTERS = [
 		range: "#91 to #180",
 		title: "Anthology of Mankind",
 		by: "with DeltaSauce",
-		status: "ends Oct 19",
+		status: "complete",
 		image: `${WORK_BASE}/2.webp`,
 		href: `${SITE_URL}/canvas`,
 	},
@@ -101,7 +101,7 @@ export function WorkChapters() {
 							</span>
 							<span className="game-logo text-[19px] leading-[1.05]">Nothing Remains the Same</span>
 							<span className="font-mono text-[10px] uppercase tracking-[0.12em] text-foreground">
-								with Pale Kirill / bidding
+								with Pale Kirill / in progress
 							</span>
 						</div>
 					</a>

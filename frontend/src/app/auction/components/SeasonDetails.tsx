@@ -68,8 +68,12 @@ function Screen({ image, children }: { image: string; children: React.ReactNode 
 }
 
 /** The signal, said once and plainly: the one new thing about this sale. */
-function SignalsExplainer() {
-	const points = [
+function SignalsExplainer({ settled }: { settled: boolean }) {
+	const points = settled ? [
+		{ n: "01", t: "One per day", d: `A word, a wish, a place, a memory, or a signal to anyone at all. Up to ${MAX_SIGNAL_BYTES} characters. A day keeps the first signal written for it, as written.` },
+		{ n: "02", t: "The holder writes it", d: "Whoever holds the day, or a wallet they delegate to, can add it at any time. Connect a wallet that holds a day to write one here." },
+		{ n: "03", t: "The artists read it", d: "When that day is made, Yigit and Pale Kirill read its signal and decide whether to use it." },
+	] : [
 		{ n: "01", t: "Write it now or later", d: `A word, a wish, a place, a memory, or a signal to anyone at all. Up to ${MAX_SIGNAL_BYTES} characters, optional. Send it with your bid or add it any time later, even after the sale. Once written, it stays as written.` },
 		{ n: "02", t: "It lands on your day", d: "Your bid's rank decides your day. The signal travels with the bid to the day it wins. If the winning bid carried none, whoever holds the day can add one." },
 		{ n: "03", t: "The artists read it", d: "When that day is made, Yigit and Pale Kirill read its signal and decide whether to use it." },
@@ -84,9 +88,18 @@ function SignalsExplainer() {
 						A frequency for a day not yet made.
 					</p>
 					<p className="font-sans text-[17px] text-foreground/90 leading-relaxed max-w-[56ch] [text-shadow:1px_1px_0_rgba(0,0,0,0.6)]">
-						Every bid can carry a signal. The market still sets each day&apos;s mood. A signal adds one more
-						input, from the person who will own the day. It never changes price or rank. It is public, and once
-						written it is permanent.
+						{settled ? (
+							<>
+								Every day can carry a signal from the person who holds it. The market still sets each
+								day&apos;s mood. A signal adds one more input. It is public, and once written it is permanent.
+							</>
+						) : (
+							<>
+								Every bid can carry a signal. The market still sets each day&apos;s mood. A signal adds one more
+								input, from the person who will own the day. It never changes price or rank. It is public, and
+								once written it is permanent.
+							</>
+						)}
 					</p>
 				</div>
 				<ol className="grid gap-3 sm:grid-cols-3">
@@ -134,13 +147,92 @@ export function SeasonDetails({
 	incrementPct,
 	reserve,
 	hardEndLabel,
+	settled = false,
+	soldCount = 0,
+	openCount = 0,
 }: {
 	durationHours: number;
 	incrementPct: number;
 	reserve: string;
 	hardEndLabel?: string;
+	/** The sale is over: speak to visitors and holders, not bidders. */
+	settled?: boolean;
+	soldCount?: number;
+	/** Days left open, each on its own Manifold auction (0 off mainnet). */
+	openCount?: number;
 }) {
-	const faqs: { q: string; a: React.ReactNode }[] = [
+	const settledFaqs: { q: string; a: React.ReactNode }[] = [
+		{
+			q: "What is Panorama?",
+			a: (
+				<>
+					An autonomous art system by <Yigit />. It reads live market data and generates one tableau a day,
+					each joined to the last, so the whole work reads as one continuous panorama. When the price of
+					$PANO climbs the work brightens; when it falls the work darkens. The artists curate and approve
+					every tableau.
+				</>
+			),
+		},
+		{
+			q: "What came before?",
+			a: "Season 1 was ninety tableaus of myth, #1 through #90. Season 2, Anthology of Mankind, was ninety technologies, #91 through #180, made with DeltaSauce.",
+		},
+		{
+			q: "What is Season 3?",
+			a: (
+				<>
+					Nothing Remains the Same is thirty tableaus, #181 through #210, made by <Yigit /> and <Kirill />.
+					Each is one day of a journey through six zones, in whatever mood the market gives it. One is
+					revealed each day from October 20.
+				</>
+			),
+		},
+		{
+			q: "What are the zones?",
+			a: `Six stretches of five days: ${SEASON_3_ZONES.map(
+				(z) => `${z.name} (#${z.firstToken}-#${z.lastToken})`,
+			).join(", ")}. The route starts in a city read as a system and ends on land still forming.`,
+		},
+		{
+			q: "What are the daily themes?",
+			a: "Pale Kirill's starting point for each day. Every zone holds five things, one a day: a figure, a place, an event, an object and a feeling, from creator on Day 1 to love on Day 30. The full table is on the route, above.",
+		},
+		{
+			q: "How can I get a day?",
+			a: (
+				<>
+					{soldCount} of the 30 days are sold; their holders can list them on{" "}
+					<Ext href={OPENSEA_COLLECTION_URL}>OpenSea</Ext>.
+					{openCount > 0 && (
+						<>
+							{" "}The other {openCount} are open for bids, each on its own auction on Manifold.{" "}
+							<Link href="/auctions" className="text-foreground underline underline-offset-2 hover:opacity-60 transition-opacity">
+								See them
+							</Link>
+							.
+						</>
+					)}
+				</>
+			),
+		},
+		{
+			q: "What is a signal?",
+			a: `An optional message for a day, or a signal to anyone at all, up to ${MAX_SIGNAL_BYTES} characters, written by whoever holds the day. Once written it never changes. The artists read it when that day is made, and may use it or leave it. It is public.`,
+		},
+		{
+			q: "Can I add a signal later?",
+			a: "Yes, any time, to a day you hold that has none, including a day you buy later. There is no deadline. A signal can never be changed or removed once written.",
+		},
+		{
+			q: "What is $PANO?",
+			a: (
+				<>
+					The ERC-20 whose price sets the work&apos;s mood, launched with SuperRare as part of its Liquid Editions program. <Ext href={TERMINAL_URL}>Trade it on the terminal</Ext>.
+				</>
+			),
+		},
+	];
+	const biddingFaqs: { q: string; a: React.ReactNode }[] = [
 		{
 			q: "What is Panorama?",
 			a: (
@@ -249,11 +341,12 @@ export function SeasonDetails({
 			),
 		},
 	];
+	const faqs = settled ? settledFaqs : biddingFaqs;
 
 	return (
 		<div className="flex flex-col gap-20 md:gap-24">
-			<SignalsExplainer />
-			<SaleSteps incrementPct={incrementPct} />
+			<SignalsExplainer settled={settled} />
+			{!settled && <SaleSteps incrementPct={incrementPct} />}
 
 			<section id="questions" className="scroll-mt-4">
 				<SectionHead title="questions" zone="village" />

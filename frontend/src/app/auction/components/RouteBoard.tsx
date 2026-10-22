@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LuMail } from "react-icons/lu";
+import { LuArrowUpRight, LuMail } from "react-icons/lu";
 import { useAddressLabel } from "@/app/hooks/useAddressLabel";
 import { DAY_KINDS, DAYS_PER_ZONE, SEASON_3_ZONES, themeForToken, type Season3Zone } from "@/lib/season3Zones";
 import type { AuctionBidRow, AuctionPhase, WonRow } from "../hooks/useAuctionState";
 import { eth, short } from "./ui";
 import { STRIP } from "./HeroPanorama";
+import type { DayAuction } from "@/lib/dayAuctions";
+import { fmtLeft, openDayView } from "./OpenDays";
 
 /** What holds one day of the route right now. */
 type Slot =
@@ -105,6 +107,8 @@ function DayCell({
 	over,
 	signalFor,
 	enableEns,
+	openDay,
+	now,
 }: {
 	zone: Season3Zone;
 	day: number;
@@ -115,6 +119,9 @@ function DayCell({
 	over: boolean;
 	signalFor: (bidId: number, tokenId?: number) => string | undefined;
 	enableEns: boolean;
+	/** The day's own auction on Manifold, once the season's auction left it open. */
+	openDay?: DayAuction;
+	now: number;
 }) {
 	const row = slot.kind !== "open" ? slot.row : undefined;
 	const mine = !!row && !!you && row.bidder.toLowerCase() === you.toLowerCase();
@@ -179,6 +186,8 @@ function DayCell({
 						</button>
 					)}
 				</div>
+			) : openDay && over ? (
+				<OpenDayCell auction={openDay} day={day} theme={theme?.theme} now={now} />
 			) : (
 				<span className={`flex-1 font-mono text-[10px] ${beam ? "text-laser font-bold" : "text-faint"}`}>
 					{beam ? "your bid lands here" : over ? "unsold" : "open"}
@@ -186,6 +195,37 @@ function DayCell({
 			)}
 			{beam && row && <span className="sr-only">Your bid would take this day.</span>}
 		</li>
+	);
+}
+
+/** A day the season's auction left open: its own Manifold auction, the whole cell a link to it. */
+function OpenDayCell({ auction, day, theme, now }: { auction: DayAuction; day: number; theme?: string; now: number }) {
+	const view = openDayView(auction, now);
+	return (
+		<a
+			href={auction.url}
+			target="_blank"
+			rel="noreferrer"
+			aria-label={`Day ${day}, ${theme}: ${view.biddable ? "open for bids" : "view"} on Manifold`}
+			className="group flex flex-1 flex-row items-baseline gap-3 xl:flex-col xl:items-start xl:justify-end xl:gap-0.5 min-w-0 after:absolute after:inset-0 after:content-['']"
+		>
+			{view.status !== "open" && (
+				<span className="font-sans font-bold text-[13px] tabular-nums leading-none text-foreground shrink-0">
+					{view.price}
+					<span className="font-mono text-[10px] font-normal text-faint ml-1">ETH</span>
+				</span>
+			)}
+			<span className="inline-flex items-center gap-1 font-mono text-[10px] text-sky-pink group-hover:text-foreground transition-colors truncate">
+				{view.left !== null
+					? fmtLeft(view.left)
+					: view.biddable
+						? "open for bids"
+						: view.status === "sold"
+							? "sold"
+							: "ended"}
+				<LuArrowUpRight size={11} aria-hidden className="shrink-0" />
+			</span>
+		</a>
 	);
 }
 
@@ -207,6 +247,8 @@ export function RouteBoard({
 	beamRank,
 	over,
 	enableEns = true,
+	openDays,
+	now = 0,
 }: {
 	bids: AuctionBidRow[];
 	won: WonRow[];
@@ -222,6 +264,10 @@ export function RouteBoard({
 	over: boolean;
 	/** Resolve holders' ENS names (off in demo mode, whose addresses are fake). */
 	enableEns?: boolean;
+	/** Days the season's auction left open, on their own Manifold auctions, by token. */
+	openDays?: Map<number, DayAuction>;
+	/** Chain-anchored unix seconds, for those auctions' clocks. */
+	now?: number;
 }) {
 	const slots = routeSlots({ bids, won, phase, maxUnits, firstTokenId });
 	const ROW = "xl:grid xl:grid-cols-[10.5rem_repeat(5,minmax(0,1fr))] xl:gap-1.5";
@@ -279,6 +325,8 @@ export function RouteBoard({
 										over={over}
 										signalFor={signalFor}
 										enableEns={enableEns}
+										openDay={openDays?.get(firstTokenId + index)}
+										now={now}
 									/>
 								);
 							})}
