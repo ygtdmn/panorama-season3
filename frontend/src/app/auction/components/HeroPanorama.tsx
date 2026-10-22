@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { CDN_BASE_URL } from "@/lib/constants";
+import { useSeason3Tableaus } from "@/app/hooks/useSeason3Tableaus";
+import { heroImage, type Season3Tableau } from "@/lib/season3Tableaus";
 
 // The season's own strip, travelling through the title screen from Interface to Abstract: the 21
 // frames of the studio panorama "S3 styles, checkpoint 1500", served from the CDN (1600x900 webp,
@@ -13,6 +15,21 @@ export const STRIP = Array.from({ length: 21 }, (_, i) => `${STRIP_BASE}/${Strin
  *  whole beside the title with the slab on stilts behind it. The strip still holds every frame;
  *  the earlier ones come round after the last. */
 const START_FRAME = 7.75;
+/** The title screen always holds this many frames: the newest published tableaus first, then
+ *  studio frames from the floating house (08) on, which each new day replaces one by one. */
+const HERO_FRAMES = 8;
+const STUDIO_FILL_FROM = 8;
+
+/**
+ * Hand-stitched joins between the newest tableau and the first studio frame after it, made on
+ * Comfy Cloud with the production seam workflow (512px band, no stitch prompt) and kept on the
+ * CDN (immutable). Keyed by the newest day's date: once the next day is out the pairing no
+ * longer applies and the plain cut returns until a new join is added here.
+ */
+const HERO_JOIN_BASE = `${CDN_BASE_URL}/season3/hero`;
+const HERO_JOINS: Record<string, { tableau: string; studio: string }> = {
+	"2026-10-22": { tableau: `${HERO_JOIN_BASE}/2026-10-22-v2/183.webp`, studio: `${HERO_JOIN_BASE}/2026-10-22-v2/08.webp` },
+};
 
 const LINKS: { label: string; href: string }[] = [
 	{ label: "Statement", href: "#statement" },
@@ -41,6 +58,10 @@ function go(href: string) {
 function useSteerableDrift(
 	viewportRef: React.RefObject<HTMLDivElement | null>,
 	trackRef: React.RefObject<HTMLDivElement | null>,
+	/** Frames in one copy of the strip, and the frame it opens on. A new strip restarts it. */
+	frameCount: number,
+	startFrame: number,
+	stripKey: string,
 ) {
 	useEffect(() => {
 		const viewport = viewportRef.current;
@@ -53,7 +74,7 @@ function useSteerableDrift(
 		let velocity = reduced ? 0 : AUTO_SPEED; // px/s; positive travels on along the route
 		let resumeAt = 0;
 		let loopWidth = track.scrollWidth / 2;
-		offset = (loopWidth * START_FRAME) / STRIP.length;
+		offset = frameCount > 0 ? (loopWidth * startFrame) / frameCount : 0;
 		let last = performance.now();
 		let raf = 0;
 
@@ -166,7 +187,7 @@ function useSteerableDrift(
 			viewport.removeEventListener("wheel", onWheel);
 			viewport.removeEventListener("keydown", onKey);
 		};
-	}, [viewportRef, trackRef]);
+	}, [viewportRef, trackRef, frameCount, startFrame, stripKey]);
 }
 
 /**
@@ -176,41 +197,65 @@ function useSteerableDrift(
 export function HeroScreen({
 	topRight,
 	primary,
+	initialTableaus = null,
 }: {
 	/** Pinned to the screen's top-right corner (the Enter Panorama button). */
 	topRight?: React.ReactNode;
 	/** The bevelled button that leads the menu: another page when given, else the bid console. */
 	primary?: { label: string; href: string };
+	/** The published tableaus as the server read them, so the first paint already has them. */
+	initialTableaus?: Season3Tableau[] | null;
 }) {
 	const viewportRef = useRef<HTMLDivElement>(null);
 	const trackRef = useRef<HTMLDivElement>(null);
-	useSteerableDrift(viewportRef, trackRef);
+	// Eight frames: the newest published tableaus (joined edge to edge), then studio frames to fill
+	// the rest until enough days are out. The whole studio strip stands in only if the index cannot
+	// be read; until the first read the screen stays dark.
+	const tableaus = useSeason3Tableaus(initialTableaus);
+	const published = tableaus !== null && tableaus.length > 0;
+	const shown = published ? tableaus.slice(-HERO_FRAMES) : [];
+	const studioFill = STRIP.slice(STUDIO_FILL_FROM, STUDIO_FILL_FROM + HERO_FRAMES - shown.length);
+	const join = shown.length > 0 && studioFill.length > 0 ? HERO_JOINS[shown[shown.length - 1].date] : undefined;
+	const frames =
+		tableaus === null
+			? []
+			: published
+				? [
+						...shown.map((t, i) => (join && i === shown.length - 1 ? join.tableau : t.src)),
+						...studioFill.map((src, i) => (join && i === 0 ? join.studio : src)),
+					]
+				: STRIP;
+	const startFrame = published ? 0 : START_FRAME;
+	useSteerableDrift(viewportRef, trackRef, frames.length, startFrame, frames.join("|"));
 
 	return (
 		<div
 			ref={viewportRef}
 			tabIndex={0}
-			aria-label="Season 3 panorama. Drag, swipe sideways or use the arrow keys to travel along it."
+			aria-label={`Season 3 panorama${published ? `, days ${shown[0].tokenId - 180} to ${shown[shown.length - 1].tokenId - 180}` : ""}. Drag, swipe sideways or use the arrow keys to travel along it.`}
 			className="relative w-full h-full overflow-hidden bg-screen-blue select-none touch-pan-y cursor-grab data-[dragging]:cursor-grabbing outline-none focus-visible:ring-2 focus-visible:ring-sky-pink"
 		>
 			<div aria-hidden className="absolute inset-0">
 				<div
 					ref={trackRef}
 					className="flex h-full w-max will-change-transform"
-					// First paint already sits on START_FRAME (the track is two copies of the strip),
-					// so the hero never flashes frame 00 before the drift takes over.
-					style={{ transform: `translate3d(-${(START_FRAME / (STRIP.length * 2)) * 100}%,0,0)` }}
+					// First paint already sits on the start frame (the track is two copies of the strip),
+					// so the hero never jumps before the drift takes over.
+					style={{
+							transform: frames.length ? `translate3d(-${(startFrame / (frames.length * 2)) * 100}%,0,0)` : undefined,
+						}}
 				>
-					{[...STRIP, ...STRIP].map((src, i) => (
+					{[...frames, ...frames].map((src, i) => (
 						// eslint-disable-next-line @next/next/no-img-element
 						<img
-							key={i}
-							src={src}
+							key={`${i}-${src}`}
+							{...heroImage(src)}
 							alt=""
 							draggable={false}
-							width={1600}
-							height={900}
-							loading={i >= START_FRAME - 1 && i <= START_FRAME + 2 ? "eager" : "lazy"}
+							width={1920}
+							height={1080}
+							loading={i >= startFrame - 1 && i <= startFrame + 2 ? "eager" : "lazy"}
+							fetchPriority={i === Math.floor(startFrame) ? "high" : undefined}
 							className="h-full w-auto aspect-[16/9] max-w-none block pointer-events-none"
 						/>
 					))}
