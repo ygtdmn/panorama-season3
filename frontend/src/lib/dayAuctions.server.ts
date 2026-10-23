@@ -22,10 +22,10 @@ const MIN_REFRESH_MS = 10_000;
 
 export class DayAuctionsUnavailableError extends Error {}
 
-const client = createPublicClient({
-	chain: mainnet,
-	transport: http(process.env.RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || undefined),
-});
+// Server-only RPC, never a public node: the bid history is an eth_getLogs over thousands of
+// blocks, which public nodes refuse or rate-limit. Unset = the route answers 503 and says why.
+const RPC_URL = process.env.RPC_URL;
+const client = RPC_URL ? createPublicClient({ chain: mainnet, transport: http(RPC_URL) }) : null;
 
 const marketplace = { address: MANIFOLD_MARKETPLACE_ADDRESS as Address, abi: manifoldMarketplaceAbi } as const;
 const bidEvent = manifoldMarketplaceAbi.find((entry) => entry.type === "event" && entry.name === "BidEvent")!;
@@ -54,7 +54,7 @@ const cache: {
 async function scanBids(head: bigint): Promise<void> {
 	for (let start = cache.lastBlock + 1n; start <= head; start += LOG_CHUNK) {
 		const end = start + LOG_CHUNK - 1n > head ? head : start + LOG_CHUNK - 1n;
-		const logs = await client.getLogs({
+		const logs = await client!.getLogs({
 			address: marketplace.address,
 			event: bidEvent,
 			args: { listingId: listingIds },
@@ -80,7 +80,7 @@ async function scanBids(head: bigint): Promise<void> {
 
 async function fillBlockTimes(blocks: bigint[]): Promise<void> {
 	const missing = [...new Set(blocks)].filter((b) => !cache.blockTimes.has(b));
-	const read = await Promise.all(missing.map((blockNumber) => client.getBlock({ blockNumber })));
+	const read = await Promise.all(missing.map((blockNumber) => client!.getBlock({ blockNumber })));
 	read.forEach((block, i) => cache.blockTimes.set(missing[i], Number(block.timestamp)));
 }
 
@@ -89,7 +89,7 @@ async function fillEns(addresses: string[]): Promise<void> {
 	const names = await Promise.all(
 		missing.map(async (address) => {
 			try {
-				return await client.getEnsName({ address: address as Address });
+				return await client!.getEnsName({ address: address as Address });
 			} catch {
 				// Unresolved this time; ask again on the next read.
 				return undefined;
@@ -101,20 +101,29 @@ async function fillEns(addresses: string[]): Promise<void> {
 	});
 }
 
+/** Best effort: the listings carry the sale; history, block times and names only add to it. */
+async function quietly(what: string, work: Promise<unknown>): Promise<void> {
+	try {
+		await work;
+	} catch (err) {
+		console.warn(`[day-auctions] ${what} failed; serving without it this time`, err);
+	}
+}
+
 async function read(): Promise<DayAuctionsPayload> {
-	const head = await client.getBlock();
+	const head = await client!.getBlock();
 	const [listings] = await Promise.all([
-		client.multicall({
+		client!.multicall({
 			contracts: listingIds.map((id) => ({ ...marketplace, functionName: "getListing" as const, args: [id] as const })),
 			allowFailure: false,
 			blockNumber: head.number,
 		}),
-		scanBids(head.number),
+		quietly("bid history", scanBids(head.number)),
 	]);
 	const bidders = listings.filter((l) => l.bid.amount > 0n).map((l) => l.bid.bidder);
 	await Promise.all([
-		fillBlockTimes(cache.bids.map((b) => b.block)),
-		fillEns([...cache.bids.map((b) => b.bidder), ...bidders]),
+		quietly("block times", fillBlockTimes(cache.bids.map((b) => b.block))),
+		quietly("ENS names", fillEns([...cache.bids.map((b) => b.bidder), ...bidders])),
 	]);
 	const label = (address: string) => cache.ens.get(address.toLowerCase()) ?? null;
 
@@ -158,6 +167,7 @@ export async function getDayAuctions(): Promise<DayAuctionsPayload> {
 	if (process.env.NEXT_PUBLIC_CHAIN_ID !== "1") {
 		throw new DayAuctionsUnavailableError("The open days are on mainnet only.");
 	}
+	if (!client) throw new Error("RPC_URL is not set on the server; the open days cannot be read.");
 	if (cache.payload && Date.now() - cache.at < MIN_REFRESH_MS) return cache.payload;
 	cache.inFlight ??= read()
 		.then((payload) => {
