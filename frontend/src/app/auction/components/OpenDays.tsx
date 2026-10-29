@@ -84,9 +84,14 @@ function OpenDayRow({ auction, now }: { auction: DayAuction; now: number }) {
 	);
 }
 
-/** The console's list of the days still open for bids, each a link to its Manifold auction. */
+/**
+ * The console's list of the days still open for bids, each a link to its Manifold auction. A day
+ * sold on Manifold leaves the list (the tick strip and the sold count already carry it), and the
+ * panel goes once none are left.
+ */
 export function OpenDaysPanel({ auctions, now }: { auctions: DayAuction[]; now: number }) {
-	if (auctions.length === 0) return null;
+	const open = auctions.filter((a) => isBiddable(dayAuctionStatus(a, now)));
+	if (open.length === 0) return null;
 	return (
 		<section aria-label="Open for bids" className="relative game-panel p-5 flex flex-col gap-3">
 			<div className="flex items-baseline justify-between gap-3">
@@ -95,11 +100,11 @@ export function OpenDaysPanel({ auctions, now }: { auctions: DayAuction[]; now: 
 					href="/auctions"
 					className="font-mono text-micro uppercase tracking-[0.18em] text-muted hover:text-foreground transition-colors"
 				>
-					all {auctions.length} →
+					all {open.length} →
 				</Link>
 			</div>
 			<ol className="flex flex-col gap-1">
-				{auctions.map((a) => (
+				{open.map((a) => (
 					<OpenDayRow key={a.listingId} auction={a} now={now} />
 				))}
 			</ol>
