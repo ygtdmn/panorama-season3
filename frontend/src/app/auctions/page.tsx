@@ -27,8 +27,9 @@ const ZONE_TILE: Record<string, string> = {
 export default function OpenForBidsPage() {
 	const { data, anchor, loading, error, unavailable } = useDayAuctions();
 	const now = useChainNow(anchor);
-	const auctions = data?.auctions ?? [];
-	const open = auctions.filter((a) => openDayView(a, now).biddable).length;
+	// Only the days still taking bids; a day sold on Manifold leaves the page.
+	const auctions = (data?.auctions ?? []).filter((a) => openDayView(a, now).biddable);
+	const open = auctions.length;
 
 	return (
 		<div className="flex min-h-dvh flex-col bg-background text-foreground lg:h-dvh lg:overflow-hidden">
@@ -55,7 +56,8 @@ export default function OpenForBidsPage() {
 						{data && (
 							<span className="text-foreground">
 								{" "}
-								{SEASON_3_DAYS - open} of {SEASON_3_DAYS} are sold. These {open} are open.
+								{SEASON_3_DAYS - open} of {SEASON_3_DAYS} are sold.
+								{open > 0 ? ` ${open === 1 ? "This one is" : `These ${open} are`} open.` : ""}
 							</span>
 						)}
 					</p>
@@ -70,8 +72,19 @@ export default function OpenForBidsPage() {
 							retry
 						</button>
 					</p>
+				) : data && open === 0 ? (
+					<p className="font-sans text-[15px] text-muted">
+						Every day is sold.{" "}
+						<Link href="/" className="text-foreground underline">
+							See the season
+						</Link>
+					</p>
 				) : (
-					<ol className="grid gap-3 sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-cols-4 lg:grid-rows-2">
+					<ol
+						className={`grid gap-3 sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:grid-cols-4 ${
+							data && open <= 4 ? "lg:grid-rows-1 lg:max-h-[34rem]" : "lg:grid-rows-2"
+						}`}
+					>
 						{data
 							? auctions.map((a) => <DayCard key={a.listingId} auction={a} now={now} />)
 							: Array.from({ length: 8 }, (_, i) => (
