@@ -10,8 +10,8 @@ export default defineConfig({
     // workers.dev only for now: season3.panorama.garden still points at Vercel. Deploys
     // enforce these, so a toggle flipped in the dashboard comes back on the next push
     // unless it is set here.
-    domains: [],
-    workersDev: true,
+    domains: ["season3.panorama.garden"],
+    workersDev: false,
     previewUrls: false,
     entrypoint: "vinext/server/fetch-handler",
     compatibilityDate: "2026-11-08",
