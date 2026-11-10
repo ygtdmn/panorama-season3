@@ -2,7 +2,7 @@
 // production value fails the BUILD instead of a collector's session mid-auction.
 //
 // NEXT_PUBLIC_* values are inlined at build time; every access below must therefore spell
-// out the full `process.env.NEXT_PUBLIC_X` form (no dynamic lookups) so Next can inline it.
+// out the full `process.env.NEXT_PUBLIC_X` form (no dynamic lookups) so the build can inline it.
 
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const DIGITS_RE = /^\d+$/;
@@ -124,15 +124,13 @@ export const ENV = {
 
 /**
  * Hard build-time requirements for the real production deployment. Called from next.config.ts.
- * Strict mode arms when the deploy platform marks the build as production
- * (VERCEL_ENV=production, or PANORAMA_PRODUCTION=1 anywhere else); the RPC/WalletConnect
+ * Strict mode arms on PANORAMA_PRODUCTION=1, which the deploy script sets (`pnpm run deploy`,
+ * also what Workers Builds runs); the RPC/WalletConnect
  * requirements additionally need the app to target mainnet. Local, CI, and sepolia builds
  * only get the format validation above.
  */
 export function assertProductionEnv(): void {
-	const platformProd =
-		process.env.VERCEL_ENV === "production" || process.env.PANORAMA_PRODUCTION === "1";
-	if (!platformProd) return;
+	if (process.env.PANORAMA_PRODUCTION !== "1") return;
 
 	// A production host must never serve the in-memory demo auction. The flag would also
 	// disarm the strict checks below, so it is rejected outright rather than treated as an

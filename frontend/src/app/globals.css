@@ -16,6 +16,13 @@
    ─────────────────────────────────────────────── */
 
 :root, .dark {
+	/* The self-hosted faces (@fontsource, imported in app/layout.tsx), with fallbacks. */
+	--font-hanken: "Hanken Grotesk Variable", "Helvetica Neue", Arial, sans-serif;
+	--font-jetbrains-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Consolas, monospace;
+	--font-plex-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+	--font-jacquard: "Jacquard 24", serif;
+	--font-newsreader: "Newsreader Variable";
+
 	--background: #040408;
 	--surface:    #0d0e22;
 	--foreground: #f4f3ff;

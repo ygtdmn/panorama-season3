@@ -23,7 +23,7 @@ const CONTRACT_SOURCE = [
 	"../../../contracts/src/PanoramaSeason3Auction.sol",
 	"../../../../panorama-season3/contracts/src/PanoramaSeason3Auction.sol",
 ]
-	.map((rel) => path.resolve(__dirname, rel))
+	.map((rel) => path.resolve(import.meta.dirname, rel))
 	.find((p) => fs.existsSync(p));
 const CONTROLLER_SOURCE = CONTRACT_SOURCE?.replace(
 	"PanoramaSeason3Auction.sol",

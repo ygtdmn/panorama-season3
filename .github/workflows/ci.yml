@@ -19,7 +19,7 @@ jobs:
           package_json_file: frontend/package.json
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
@@ -92,7 +92,7 @@ jobs:
           package_json_file: frontend/package.json
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - name: install deps + browsers

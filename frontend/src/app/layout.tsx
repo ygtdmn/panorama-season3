@@ -1,50 +1,24 @@
 import type { Metadata } from "next";
-import { Hanken_Grotesk, IBM_Plex_Mono, Jacquard_24, JetBrains_Mono, Newsreader } from "next/font/google";
+// Self-hosted faces: vinext would load next/font/google from Google's CDN at runtime, which the
+// CSP's font-src 'self' blocks. The --font-* variables they feed are set in globals.css.
+// Two layers of type. Panorama's own: Hanken Grotesk for text and JetBrains Mono for labels,
+// as on every Panorama site. Kirill's game layer: Jacquard 24, a pixel blackletter, for the
+// season title, and bold italic Arial (a system font) for menu words. IBM Plex Mono is the bid
+// console's labels and figures (globals.css re-points --font-mono inside .sale-console), and
+// Newsreader is a book serif for Pale Kirill's statement only, so it reads as printed wall text.
+import "@fontsource-variable/hanken-grotesk/wght.css";
+import "@fontsource-variable/jetbrains-mono/wght.css";
+import "@fontsource/ibm-plex-mono/latin-400.css";
+import "@fontsource/ibm-plex-mono/latin-500.css";
+import "@fontsource/ibm-plex-mono/latin-600.css";
+import "@fontsource/jacquard-24/latin-400.css";
+import "@fontsource-variable/newsreader/opsz.css";
+import "@fontsource-variable/newsreader/opsz-italic.css";
 import "./globals.css";
 import { Providers } from "./providers";
 import { themeInitScript } from "@/lib/themeScript";
 import { railMaxInitScript } from "@/lib/railMax";
 import { AUCTION_SITE_URL, OG_IMAGE_ALT, OG_IMAGE_URL } from "@/lib/constants";
-
-// Two layers of type. Panorama's own: Hanken Grotesk for text and JetBrains Mono for labels,
-// as on every Panorama site. Kirill's game layer: Jacquard 24, a pixel blackletter, for the
-// season title, and bold italic Arial (a system font) for menu words.
-const hanken = Hanken_Grotesk({
-	subsets: ["latin"],
-	display: "swap",
-	variable: "--font-hanken",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-	subsets: ["latin"],
-	weight: ["400", "500", "700"],
-	display: "swap",
-	variable: "--font-jetbrains-mono",
-});
-
-// The bid console's labels and figures (globals.css re-points --font-mono inside .sale-console).
-const plexMono = IBM_Plex_Mono({
-	subsets: ["latin"],
-	weight: ["400", "500", "600"],
-	display: "swap",
-	variable: "--font-plex-mono",
-});
-
-const jacquard = Jacquard_24({
-	subsets: ["latin"],
-	weight: "400",
-	display: "swap",
-	variable: "--font-jacquard",
-});
-
-// A book serif for Pale Kirill's statement only, so it reads as printed wall text.
-const newsreader = Newsreader({
-	subsets: ["latin"],
-	style: ["normal", "italic"],
-	axes: ["opsz"],
-	display: "swap",
-	variable: "--font-newsreader",
-});
 
 const TITLE = "Panorama Season 3: Nothing Remains the Same";
 const description =
@@ -82,7 +56,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
 	return (
-		<html lang="en" className={`${hanken.variable} ${jetbrainsMono.variable} ${plexMono.variable} ${jacquard.variable} ${newsreader.variable} dark h-full`} suppressHydrationWarning>
+		<html lang="en" className="dark h-full" suppressHydrationWarning>
 			<body className="antialiased h-full font-sans bg-background text-foreground">
 				<script dangerouslySetInnerHTML={{ __html: themeInitScript + railMaxInitScript }} />
 				<Providers>{children}</Providers>

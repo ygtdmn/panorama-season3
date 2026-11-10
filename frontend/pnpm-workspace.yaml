@@ -1,0 +1,16 @@
+minimumReleaseAge: 4320
+# Moved from the package.json "pnpm" field: pnpm 11+ reads these settings from here.
+overrides:
+  "ws": ">=8.21.0"
+  "postcss@<8.5.23": "^8.5.23"
+  "nanoid@<3.3.18": "^3.3.18"
+  "source-map-js@<1.2.2": "^1.2.2"
+  "baseline-browser-mapping@<2.11.0": "^2.11.0"
+  "browserslist@<4.28.7": "^4.28.7"
+  "zod@<4.6.6": "^4.6.6"
+  "fflate@<0.7.5": "^0.7.5"
+# Dependency build scripts, each one decided: false skips it (the package works without it).
+# pnpm 12 stops an install on any build script that isn't listed here.
+allowBuilds:
+  workerd: true
+  unrs-resolver: false

@@ -49,18 +49,3 @@ export async function readSeason3Tableaus(): Promise<Season3Tableau[] | null> {
 		return null;
 	}
 }
-
-/**
- * A tableau through Next's image optimizer: a smaller webp with a cache lifetime of its own (the
- * CDN serves the originals no-cache). Studio frames pass through untouched; they are immutable.
- */
-export function heroImage(src: string): { src: string; srcSet?: string; sizes?: string } {
-	if (!src.startsWith(`${CDN_BASE_URL}/optimized_`)) return { src };
-	const at = (w: number) => `/_next/image?url=${encodeURIComponent(src)}&w=${w}&q=75`;
-	return {
-		src: at(1920),
-		srcSet: `${at(1200)} 1200w, ${at(1920)} 1920w`,
-		// a frame is 16:9 at the screen's height (at most 880px)
-		sizes: "min(1564px, 178vh)",
-	};
-}

@@ -6,7 +6,7 @@ import { privateKeyToAccount } from "viem/accounts";
 
 export const ANVIL_PORT = 8547;
 export const RPC_URL = `http://127.0.0.1:${ANVIL_PORT}`;
-export const E2E_DIR = __dirname;
+export const E2E_DIR = import.meta.dirname;
 
 /** anvil's well-known dev keys (local test chain only). */
 export const ANVIL_KEYS = [
@@ -235,7 +235,10 @@ export async function installWallet(page: Page, account: `0x${string}`) {
 					headers: { "content-type": "application/json" },
 					body: JSON.stringify({ jsonrpc: "2.0", id: id++, method, params }),
 				});
-				const j = await res.json();
+				const j = (await res.json()) as {
+					result?: unknown;
+					error?: { message: string; code?: number; data?: unknown };
+				};
 				if (j.error) {
 					const e = new Error(j.error.message) as Error & { code?: number; data?: unknown };
 					e.code = j.error.code;

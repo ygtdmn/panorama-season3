@@ -68,7 +68,8 @@ Everything else, the 58/42 split included, is the Season 2 code unchanged. These
 contracts/   Foundry project: the auction contract, the signal controller,
              the Panorama NFT + mint controller it mints from, tests (unit, fuzz, invariant,
              atomic-settlement), lifecycle forge scripts, shell tooling.
-frontend/    Standalone Next.js app: public bidding page (/) built around the
+frontend/    Next.js app built with vinext and served as a Cloudflare Worker:
+             public bidding page (/) built around the
              route board (the thirty days as the auction board),
              wallet-gated owner console with the signal reader (/admin),
              and public recovery tools (/recovery).

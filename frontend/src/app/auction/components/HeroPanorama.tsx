@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { CDN_BASE_URL } from "@/lib/constants";
 import { useSeason3Tableaus } from "@/app/hooks/useSeason3Tableaus";
-import { heroImage, type Season3Tableau } from "@/lib/season3Tableaus";
+import type { Season3Tableau } from "@/lib/season3Tableaus";
 
 // The season's own strip, travelling through the title screen from Interface to Abstract: the 21
 // frames of the studio panorama "S3 styles, checkpoint 1500", served from the CDN (1600x900 webp,
@@ -249,7 +249,8 @@ export function HeroScreen({
 						// eslint-disable-next-line @next/next/no-img-element
 						<img
 							key={`${i}-${src}`}
-							{...heroImage(src)}
+							// Straight from the CDN: vinext's /_next/image takes local sources only.
+							src={src}
 							alt=""
 							draggable={false}
 							width={1920}

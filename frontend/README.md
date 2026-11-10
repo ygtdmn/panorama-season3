@@ -1,8 +1,8 @@
 # Frontend
 
-Standalone Next.js 16 app for the Panorama Season 3 auction, *Nothing Remains the Same* (tokens #181-#210). Three routes:
+Next.js 16 App Router app for the Panorama Season 3 auction, built with [vinext](https://github.com/cloudflare/vinext) (Cloudflare's Vite reimplementation of Next) and served as the Cloudflare Worker `panorama-season3`,, *Nothing Remains the Same* (tokens #181-#210). Three routes:
 
-- **`/`**: public bidding page (`/auction` redirects here), styled after Pale Kirill's old-PC-game look. A title screen (the season's studio strip drifting behind a red blackletter title and a bold italic menu), then the **route board** (`RouteBoard.tsx`: six zone panels, each headed by its studio tile, five inventory slots per zone showing the bid that holds each day, its signal, and the day a bid being typed would take) beside a sticky **console** (clock, the thirty days filling up, the bid form with the optional signal and a live "Lands on #N / Day N, Zone" readout, your bids, refunds, recovery). A collapsible ledger keeps the full standings with addresses; signals, sale steps and the FAQ follow (`SeasonDetails.tsx`). Post-settlement results come from `Won` event logs. The strip images in `public/season3/strip/` are studio generations, to be replaced by final header images.
+- **`/`**: public bidding page (`/auction` redirects here), styled after Pale Kirill's old-PC-game look. A title screen (the season's studio strip drifting behind a red blackletter title and a bold italic menu), then the **route board** (`RouteBoard.tsx`: six zone panels, each headed by its studio tile, five inventory slots per zone showing the bid that holds each day, its signal, and the day a bid being typed would take) beside a sticky **console** (clock, the thirty days filling up, the bid form with the optional signal and a live "Lands on #N / Day N, Zone" readout, your bids, refunds, recovery). A collapsible ledger keeps the full standings with addresses; signals, sale steps and the FAQ follow (`SeasonDetails.tsx`). Post-settlement results come from `Won` event logs. The hero's images come from the CDN (`cdn.panorama.garden`), served as-is.
 - **`/admin`**: owner console, gated on the connected wallet matching `owner()`. Batched finalize, cancel, refundAll, pause, the payout split read from `SPLIT_A_BPS()` (58/42). Noindexed. Below it, the **Signals** reader: one row per day 1-30 with token, zone, holder (or the bidder holding the rank), the effective signal and its source (bid or holder), plus copy-all and a JSON download. Signals are public on-chain, so the reader shows for any visitor; only owner actions are gated. The wallet check is client-side convenience only; the security boundary is the contract's `onlyOwner` modifiers, which revert any write from a non-owner regardless of what the page renders.
 - **`/recovery`**: public self-serve settlement and refund tools: `withdraw`, permissionless `finalize` after the 7-day grace, cancelled-auction refunds, supply-mismatch recovery, and `emergencyRefund`, each with live availability, a countdown to eligibility, and an Etherscan `#writeContract` fallback.
 
@@ -12,12 +12,17 @@ Stack: React 19, TypeScript, Tailwind CSS 4, wagmi 3 + viem 2, TanStack Query.
 
 ```bash
 pnpm install
-pnpm dev        # port 5476
+pnpm dev        # vite dev (the app runs in workerd) on port 5476
+pnpm build      # vite build (Worker output in .cloudflare/output)
+pnpm start      # run the built Worker locally (vite preview)
+pnpm deploy     # PANORAMA_PRODUCTION=1 build + deploy to Cloudflare (needs `npx cf auth login`)
 ```
+
+The server-only `RPC_URL` (for `/api/day-auctions`) is a Worker secret: locally it goes in the git-ignored `.dev.vars` (`RPC_URL=...`, read by `vite dev` and `vite preview`), in production `npx cf workers secrets update RPC_URL --worker panorama-season3 --type secret_text`. Production's public build values are committed in `.env.production`. A local `.env.local` outranks `.env.production` in a local build, so a local deploy loads `.env.production` into the environment first: `set -a; . ./.env.production; set +a; pnpm deploy`.
 
 Open [http://localhost:5476/?demo=1](http://localhost:5476/?demo=1) to run without a deployed contract. The `?demo=1` URL param works in dev and on non-mainnet builds only; mainnet production builds ignore it, so a shared link can never show the simulation as the real auction. A production-platform build fails outright if `NEXT_PUBLIC_AUCTION_DEMO=1` is set; run dedicated demo deployments on a preview (non-production) environment. Demo mode (`src/app/auction/demo/demoStore.ts`) mirrors the Solidity logic exactly: ceiling basis-point math, the 24h extension cap, in-window sub-threshold raise rejection, id tie-breaks, time-gated emergency refunds, and the signal controller (`placeBid(signal)` forwarding, write-once `setBidSignal` and `setTokenSignal` with no deadline, the 280-byte limit, holders after demo settlement). Unit tests assert this parity, including the constants against the Solidity source when `../contracts` is present.
 
-Against a real chain, copy `.env.example` to `.env` and fill in the values. `src/lib/env.ts` validates the configuration at build time; a production mainnet build (`VERCEL_ENV=production` or `PANORAMA_PRODUCTION=1`) fails without an authenticated `NEXT_PUBLIC_RPC_URL`, a WalletConnect project id, and the deploy block, by design.
+Against a real chain, copy `.env.example` to `.env.local` and fill in the values. `src/lib/env.ts` validates the configuration at build time (`next.config.ts` calls it); a production mainnet build (`PANORAMA_PRODUCTION=1`, which `pnpm deploy` sets) fails without an authenticated `NEXT_PUBLIC_RPC_URL`, a WalletConnect project id, and the deploy block, by design.
 
 ## Signals
 
@@ -53,7 +58,7 @@ End-to-end (needs Foundry; run `forge build` in `../contracts` first so the arti
 pnpm test:e2e   # Playwright boots anvil on 8547, deploys the real Panorama NFT and mint
                 # controller (minted to 180, like mainnet before the sale), the signal
                 # controller and the auction from the
-                # forge artifacts, starts next dev on 5477, injects an EIP-6963 wallet shim,
+                # forge artifacts, starts vite dev on 5477, injects an EIP-6963 wallet shim,
                 # and drives: bidding, a bid with a signal, adding a signal later from
                 # Your bids (a second add is refused), displacement,
                 # front-run revert recovery, anti-snipe extension, wallet rejection,

@@ -33,6 +33,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.production
 
 # vercel
 .vercel
@@ -47,3 +48,10 @@ next-env.d.ts
 /e2e/.anvil.pid
 /test-results/
 /playwright-report/
+
+# vinext and Cloudflare
+/dist/
+.vinext/
+.cloudflare/
+.wrangler/
+.dev.vars*
