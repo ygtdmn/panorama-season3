@@ -15,7 +15,7 @@ pnpm install
 pnpm dev        # vite dev (the app runs in workerd) on port 5476
 pnpm build      # vite build (Worker output in .cloudflare/output)
 pnpm start      # run the built Worker locally (vite preview)
-pnpm deploy     # PANORAMA_PRODUCTION=1 build + deploy to Cloudflare (needs `npx cf auth login`)
+pnpm run deploy # PANORAMA_PRODUCTION=1 build + deploy to Cloudflare (needs `npx cf auth login`)
 ```
 
 The server-only `RPC_URL` (for `/api/day-auctions`) is a Worker secret: locally it goes in the git-ignored `.dev.vars` (`RPC_URL=...`, read by `vite dev` and `vite preview`), in production `npx cf workers secrets update RPC_URL --worker panorama-season3 --type secret_text`. Production's public build values are committed in `.env.production`. A local `.env.local` outranks `.env.production` in a local build, so a local deploy loads `.env.production` into the environment first: `set -a; . ./.env.production; set +a; pnpm deploy`.
